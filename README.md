@@ -44,5 +44,7 @@ Required Python version: 3.12 or above
 14. Run bot via `python3.12 main.py INSERT_ID_OF_DOCKER_IMAGE`
 15. Leave bot screen via `^A+D`. To connect the screen again use `screen -r bot`.
 
-### Commands
+### Enter /moderhelp to see commands for moderators
+### You can add yourself as moderator by placing your telegram alias at the first line of the `moderators.txt` file
+
 
