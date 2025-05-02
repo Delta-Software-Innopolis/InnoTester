@@ -43,3 +43,6 @@ Required Python version: 3.12 or above
 13. Open `token.yaml` file and insert your token in the quotes
 14. Run bot via `python3.12 main.py INSERT_ID_OF_DOCKER_IMAGE`
 15. Leave bot screen via `^A+D`. To connect the screen again use `screen -r bot`.
+
+### Commands
+
