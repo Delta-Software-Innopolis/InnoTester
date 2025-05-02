@@ -2,6 +2,8 @@
 
 ![Logo](logo.jpg)
 
+## Brief description
+
 The ITP Helper Bot is a Telegram bot that is able to test solutions for assignments in various subjects. A reference solution and a test generator are loaded into the bot. After that, the students send their solution as an attached file to the bot, and the bot generates from 0 to 300 random tests (depending on how many the student specified) and submits them to the reference program. The reference program gives the correct answer, after which the same tests are passed through the solution being tested. Next, the results are compared, and if there is any difference, the student is sent a test protocol and a web page on which there is a comparison of the answers of the reference program and the probe program. All student solutions are run in their own separate Docker container. The bot keeps a log so that the maintainer can track usage statistics and any issues. You can easily add new programming language to the bot at any time. To do this, add a command to install the language you need in the Dockerfile, as well as commands to compile and run in the `compile.yaml` file, then restart the bot with the new Docker image.
 
 
