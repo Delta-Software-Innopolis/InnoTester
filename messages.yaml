@@ -1,0 +1,13 @@
+start: "Hello and Welcome to the <b>ITP Helper Bot!</b>\n\nThis bot is designed to test ITP assignment
+ solutions and help you to find errors in the answers of your program.\n\n<u>How does it works?</u>\nYou
+ upload your solution program (.c or .java) as an attached file, and just send it. After this bot will 
+ generate 100 random tests and pass it through solution, that got full grade on the CodeForces (reference program).
+ Then, this 100 tests will be passed through your solution (probe program), and the answers from both solutions will
+ be compared. If there will be any difference between two answers, the bot will send you protocol with the answer of
+ the reference, the answer of the probe, and the test that was used.\n\nIf you want to increase the count of tests that
+ bot should perform, you can specify this count in the message with attached file of your solution. The number of tests
+ should be in the interval [1; 300].\n\n<b>We wish you get full grade for your assignment! Good luck!</b>\n\nEnter
+ /refstat to check the assignment number that the bot is currently configured for.
+ "
+
+notConfigured: "There is no assignments at the current moment"
