@@ -134,10 +134,6 @@ async def removeModer(message: types.Message):
         if len(args) == 1:
             await message.answer("Usage: /removemoder <username>")
         else:
-            if args[1] == "mhdtadev":
-                await message.answer(f"I am not so stupid lol")
-                return
-
             moders = await Config.getModerators()
 
             if args[1] not in moders:
