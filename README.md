@@ -46,5 +46,6 @@ Required Python version: 3.12 or above
 
 ### Enter /moderhelp to see commands for moderators
 ### You can add yourself as moderator by placing your telegram alias at the first line of the `moderators.txt` file
+### Maintainer always should be at the first line of the `moderators.txt` file!
 
 
