@@ -4,8 +4,9 @@ import aiofiles
 import os
 import shutil
 
-from ITPHelper.Core.ITPHelperBot import dp, instance
+from ITPHelper.Core.ITPHelperBot import dp, instance, assignmentsManager
 import ITPHelper.Utils.Config as Config
+from ITPHelper.Utils.Exceptions import *
 
 
 @dp.message(Command("removereference"))
@@ -211,3 +212,56 @@ async def probeList(message: types.Message):
     else:
         await message.answer("Sorry, but you don't have permission to perform this command")
 
+
+@dp.message(Command("addassignment"))
+async def addAssignment(message: types.Message):
+    if message.from_user.username in await Config.getModerators():
+        try:
+
+            assignment_name = ' '.join(message.text.split()[1:])
+            new_assignment = await assignmentsManager.addAssignment(assignment_name)
+
+            await message.answer(
+                f"New assignment created:\n"
+                f"🛠 \(`{new_assignment.id}`\) {new_assignment.name}\n\n"
+                "Consider uploading reference and testgen for it",
+                parse_mode="MarkdownV2"
+            )
+
+        except AlreadyExists:
+            await message.answer(
+                f"Assignment named: \"{assignment_name}\" already exists\n"
+                "Unusual, but consider renaming"
+            )
+
+        except NoNameProvided:
+            await message.answer(
+                "Usage:\n"
+                "`/addassignment <assignment name>`",
+                parse_mode="MarkdownV2"
+            )
+        
+    else:
+        await message.answer("Sorry, but you don't have permission to perform this command")
+
+
+@dp.message(Command("assignments", "list"))
+async def listAssignments(message: types.Message):
+    if message.from_user.username in await Config.getModerators():
+        
+        assignments_list = "\n".join(
+            str(assignment)
+                .replace("(", "\(`") # for markdown coolness
+                .replace(")", "`\)")
+            for assignment in
+            assignmentsManager.cached
+        )
+
+        await message.answer(
+            "Here are all the assignments:\n"
+            f"{assignments_list}",
+            parse_mode="MarkdownV2"
+        )
+
+    else:
+        await message.answer("Sorry, but you don't have permission to perform this command")

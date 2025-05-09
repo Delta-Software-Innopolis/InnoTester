@@ -7,6 +7,7 @@ from typing import Optional
 class Assignment:
 
     class Status(Enum):
+        NOTCONFIGURED = -1
         RUNNING = 0
         CLOSED = 1
 
@@ -14,16 +15,17 @@ class Assignment:
     name: str
     status: Status
 
-    has_reference: bool
-    reference_id: Optional[str]
+    has_reference: bool = False
+    reference_id: Optional[str] = None
 
-    has_testgen: bool
-    testgen_id: Optional[str]
+    has_testgen: bool = False
+    testgen_id: Optional[str] = None
 
     @staticmethod
     def from_dict(data: dict) -> "Assignment":
         data_copy = data.copy()
         match data["status"]:
+            case "NOTCONFIGURED": data_copy["status"] = Assignment.Status.NOTCONFIGURED
             case "RUNNING": data_copy["status"] = Assignment.Status.RUNNING
             case "CLOSED": data_copy["status"] = Assignment.Status.CLOSED
         return Assignment(**data_copy)
@@ -38,3 +40,13 @@ class Assignment:
             "has_testgen": self.has_testgen,
             "testgen_id": self.testgen_id
         }
+
+    def __str__(self) -> str:
+        status_emoji = None
+        match self.status:
+            case Assignment.Status.NOTCONFIGURED: status_emoji = "🛠"
+            case Assignment.Status.RUNNING: status_emoji = "✅"
+            case Assignment.Status.CLOSED: status_emoji = "🌙"
+        return (
+            fr"{status_emoji} ({self.id}) {self.name}"
+        )
