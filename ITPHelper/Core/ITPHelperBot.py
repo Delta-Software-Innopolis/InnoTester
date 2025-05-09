@@ -1,6 +1,7 @@
 from aiogram import Bot, Dispatcher
 from ITPHelper.Utils.Logger import Logger
 import ITPHelper.Utils.Config as Config
+from ITPHelper.Core.Assignments import AssignmentsManager
 
 
 class ITPHelperBot(Bot):
@@ -11,3 +12,5 @@ class ITPHelperBot(Bot):
 instance = ITPHelperBot()
 dp = Dispatcher()
 logger = Logger("log.txt")
+
+assignmentsManager = AssignmentsManager()
