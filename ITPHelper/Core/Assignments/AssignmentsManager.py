@@ -34,6 +34,22 @@ class AssignmentsManager:
         return new_assignment
 
     
+    async def setAssignment(self, assignment: Assignment):
+        for i in range(len(self.cached)):
+            if self.cached[i].id == assignment.id:
+                self.cached[i] = assignment
+                await self.__writeAssignments(self.cached)
+                return
+        raise AssignmentNotFound(assignment.id)
+
+    
+    async def getAssignment(self, id: str) -> Assignment:
+        for a in self.cached:
+            if a.id == id:
+                return a
+        raise AssignmentNotFound()
+
+    
     async def updateAssignments(self):
         self.cached = await self.__readAssignments()
 

@@ -3,8 +3,10 @@ from aiogram.filters.command import Command
 import aiofiles
 import os
 import shutil
+from io import BytesIO
 
-from ITPHelper.Core.ITPHelperBot import dp, instance, assignmentsManager
+
+from ITPHelper.Core.ITPHelperBot import dp, instance, assignmentsManager, codeManager
 import ITPHelper.Utils.Config as Config
 from ITPHelper.Utils.Exceptions import *
 
@@ -51,21 +53,50 @@ async def cmdClearTestGen(message: types.Message):
 @dp.message(Command("uploadreference"))
 async def uploadReference(message: types.Message):
     if message.from_user.username in await Config.getModerators():
+
+        if (caption := message.caption) == None or len(caption.split()) != 2:
+            await message.answer(
+                "Usage:\n"
+                "`/uploadreference <assignment_id>`\n"
+                "Document has to be attached to the message\!\n"
+                "Use /list to see all the assignments",
+                parse_mode="MarkdownV2"
+            )
+            return
+
         if message.document is None:
             await message.answer("You need to perform this command in the message with attached file")
             return
 
-        filename = "reference." + Config.getLanguage("reference")
+        try:
+            ext = message.document.file_name.split('.')[-1]
+            id = message.caption.split()[1]
+            assignment = await assignmentsManager.getAssignment(id)
 
-        await Config.updateWhoLoaded(message.from_user.username)
+            file = await instance.get_file(message.document.file_id)
+            io_code = BytesIO()
+            await instance.download_file(file.file_path, io_code)
+            code = io_code.read().decode("utf-8")
 
-        if not os.path.exists(filename):
-            path = (await instance.get_file(message.document.file_id)).file_path
-            extension = str(path).split(".")[-1]
-            await instance.download_file(path, "reference." + extension)
-            await message.answer("Reference has been uploaded successfully")
-        else:
-            await message.answer("Reference has already been uploaded")
+            new_reference = await codeManager.addReference(id, message.from_user.username, ext, code)
+            assignment.has_reference = True
+            assignment.reference_id = new_reference.id
+
+            if all([assignment.has_reference, assignment.has_testgen]):
+                assignment.status = assignment.Status.RUNNING
+
+            await assignmentsManager.setAssignment(assignment)
+
+            await message.answer("Reference Successfully uploaded")
+
+        except AssignmentNotFound:
+            await message.answer(
+                f"Assignment with id: `{id}` not found",
+                parse_mode="MarkdownV2"
+            )
+
+        return
+
     else:
         await message.answer("Sorry, but you don't have permission to perform this command")
 
@@ -73,19 +104,48 @@ async def uploadReference(message: types.Message):
 @dp.message(Command("uploadtestgen"))
 async def uploadTestGen(message: types.Message):
     if message.from_user.username in await Config.getModerators():
+        if (caption := message.caption) == None or len(caption.split()) != 2:
+            await message.answer(
+                "Usage:\n"
+                "`/uploadtestgen <assignment_id>`\n"
+                "Document has to be attached to the message\!\n"
+                "Use /list to see all the assignments",
+                parse_mode="MarkdownV2"
+            )
+            return
+
         if message.document is None:
             await message.answer("You need to perform this command in the message with attached file")
             return
 
-        filename = "testgen." + Config.getLanguage("testgen")
+        try:
+            ext = message.document.file_name.split('.')[-1]
+            id = message.caption.split()[1]
+            assignment = await assignmentsManager.getAssignment(id)
 
-        if not os.path.exists(filename):
-            path = (await instance.get_file(message.document.file_id)).file_path
-            extension = str(path).split(".")[-1]
-            await instance.download_file(path, "testgen." + extension)
-            await message.answer("Test generator has been uploaded successfully")
-        else:
-            await message.answer("Test generator has already been uploaded")
+            file = await instance.get_file(message.document.file_id)
+            io_code = BytesIO()
+            await instance.download_file(file.file_path, io_code)
+            code = io_code.read().decode("utf-8")
+
+            new_reference = await codeManager.addTestGen(id, message.from_user.username, ext, code)
+            assignment.has_testgen = True
+            assignment.testgen_id = new_reference.id
+
+            if all([assignment.has_reference, assignment.has_testgen]):
+                assignment.status = assignment.Status.RUNNING
+
+            await assignmentsManager.setAssignment(assignment)
+
+            await message.answer("TestGen Successfully uploaded")
+
+        except AssignmentNotFound:
+            await message.answer(
+                f"Assignment with id: `{id}` not found",
+                parse_mode="MarkdownV2"
+            )
+
+        return
     else:
         await message.answer("Sorry, but you don't have permission to perform this command")
 
@@ -195,7 +255,6 @@ async def moderHelp(message: types.Message):
             "/removemoder <username> - Remove a moderator\n"
             "/whatsmissing - Shows what is not uploaded to the bot: test generator or reference\n"
             "/uploadtestgen - You need to perform this command only in the message with attached test generator\n"
-            "/uploadreference - You need to perform this command only in the message with attached reference\n"
             "/removetestgen - Removes the test generator\n"
             "/removereference - Removes the reference\n"
             "/probelist - list all currently running probes\n"
@@ -204,7 +263,8 @@ async def moderHelp(message: types.Message):
             "Commands in dev:\n"
             "/assignments (/list) - list assignments\n"
             "/addassignment <assignment name> - add new assignment (🛠)\n"
-            "/refresh - reread the assignments.json (after manual change)\n"
+            "/refresh - reread the .json files (after manual change)\n"
+            "/uploadreference <assignment id> - You need to perform this command only in the message with attached reference\n"
         )
 
     else:
@@ -252,7 +312,8 @@ async def addAssignment(message: types.Message):
 
             await message.answer(
                 f"New assignment created:\n"
-                fr"🛠 \(`{new_assignment.id}`\) {new_assignment.name}\n\n"
+                fr"🛠 \(`{new_assignment.id}`\) {new_assignment.name}"
+                "\n\n"
                 "Consider uploading reference and testgen for it",
                 parse_mode="MarkdownV2"
             )

@@ -21,6 +21,7 @@ class Assignment:
     has_testgen: bool = False
     testgen_id: Optional[str] = None
 
+
     @staticmethod
     def from_dict(data: dict) -> "Assignment":
         data_copy = data.copy()
@@ -50,3 +51,26 @@ class Assignment:
         return (
             fr"{status_emoji} ({self.id}) {self.name}"
         )
+
+    
+@dataclass
+class CodeRecord:
+    id: str
+    assignment_id: str
+    ext: str
+    author: str
+
+    @staticmethod
+    def from_dict(data: dict) -> "CodeRecord":
+        return CodeRecord(**data)
+
+    def to_dict(self) -> dict:
+        return {
+            "id": self.id,
+            "assignment_id": self.assignment_id,
+            "ext": self.ext,
+            "author": self.author
+        }
+
+class Reference(CodeRecord): pass
+class TestGen(CodeRecord): pass
