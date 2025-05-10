@@ -335,22 +335,6 @@ async def addAssignment(message: types.Message):
         await message.answer("Sorry, but you don't have permission to perform this command")
 
 
-@dp.message(Command("assignments", "list"))
-async def listAssignments(message: types.Message):
-    if message.from_user.username in await Config.getModerators():
-        
-        assignments_list = build_assignments_list(assignmentsManager.cached)
-
-        await message.answer(
-            "Here are all the assignments:\n"
-            f"{assignments_list}",
-            parse_mode="MarkdownV2"
-        )
-
-    else:
-        await message.answer("Sorry, but you don't have permission to perform this command")
-
-
 @dp.message(Command("refresh"))
 async def refreshAssignments(message: types.Message):
     if message.from_user.username in await Config.getModerators():

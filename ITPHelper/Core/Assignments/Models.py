@@ -21,6 +21,10 @@ class Assignment:
     has_testgen: bool = False
     testgen_id: Optional[str] = None
 
+    
+    def is_configured(self) -> bool:
+        return self.status != self.Status.NOTCONFIGURED
+
 
     @staticmethod
     def from_dict(data: dict) -> "Assignment":

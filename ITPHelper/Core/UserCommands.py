@@ -1,4 +1,5 @@
-from aiogram import types
+from aiogram import types, F
+from aiogram.fsm.context import FSMContext
 from aiogram.enums import ParseMode
 from aiogram.filters.command import Command
 from aiogram.exceptions import *
@@ -10,7 +11,19 @@ import shutil
 
 
 from ITPHelper.Core.ITPHelperBot import *
+from ITPHelper.Utils.Exceptions import *
 import ITPHelper.Utils.Config as Config
+
+
+# utils
+
+def build_assignments_list(assignments: list) -> str:
+    return "\n".join(
+        str(assignment)
+            .replace("(", r"\(`") # for markdown coolness
+            .replace(")", r"`\)")
+        for assignment in assignments
+    )
 
 
 @dp.message(Command("refstat"))
@@ -25,11 +38,70 @@ async def cmdStart(message: types.Message):
     await message.answer(Config.messages["start"], parse_mode=ParseMode.HTML)
 
 
+@dp.message(Command("assignment", 'a'), F.text)
+async def chooseAssignment(message: types.Message, state: FSMContext):
+    if len(message.text.split()) != 2:
+        await message.answer(
+            "Usage: `/assignment <id>`\n"
+            "To see all running assignments, use /list",
+            parse_mode="MarkdownV2"
+        ); return
+    id = message.text.split()[1]
+    try:
+        assignment = await assignmentsManager.getAssignment(id)
+
+        if not assignment.is_configured():
+            raise NotConfigured()
+
+        await state.set_data({"assignment": assignment})
+        await message.answer(
+            "Assignment chosen:\n"
+            +str(assignment)
+                .replace("(", r"\(`") # for markdown coolness
+                .replace(")", r"`\)")
+            +"\nNow you can send the code",
+            parse_mode="MarkdownV2"
+        )
+    except AssignmentNotFound:
+        await message.answer(
+            f"Assignment with id `{id}` not found\n"
+            "To see all running assignments, use /list",
+            parse_mode="MarkdownV2"
+        )
+
+    except NotConfigured:
+        await message.answer(
+            f"This assignment is not configured yet :(\n"
+            "If YOU have the solution to the problem or a working test generator, "
+            "share with us, be a hero)"
+        )
+
+
+@dp.message(Command("assignments", "list"))
+async def listAssignments(message: types.Message):
+    
+    assignments_list = build_assignments_list(assignmentsManager.cached)
+
+    await message.answer(
+        "Here are all the assignments:\n"
+        f"{assignments_list}",
+        parse_mode="MarkdownV2"
+    )
+
+
+
 @dp.message()
-async def anyMessage(message: types.Message):
+async def anyMessage(message: types.Message, state: FSMContext):
     if message.from_user.id in Config.banlist:
         await logger.info(f"{message.from_user.username} from banlist tried to test solution")
         return
+
+    assignment = (await state.get_data()).get("assignment")
+    if not assignment:
+        await message.answer(
+            "First, choose the assignment using:\n"
+            "/assignment (shorthand /a) command"
+        ); return
 
     if message.document is not None:
         if not Config.checkReady():
