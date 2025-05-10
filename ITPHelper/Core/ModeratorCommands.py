@@ -187,7 +187,25 @@ async def moderList(message: types.Message):
 @dp.message(Command("moderhelp"))
 async def moderHelp(message: types.Message):
     if message.from_user.username in await Config.getModerators():
-        await message.answer("Moderator commands:\n/moderhelp - Shows this message\n/moderlist - Get the list of all moderators\n/addmoder <username> - Add a new moderator\n/removemoder <username> - Remove a moderator\n/whatsmissing - Shows what is not uploaded to the bot: test generator or reference\n/uploadtestgen - You need to perform this command only in the message with attached test generator\n/uploadreference - You need to perform this command only in the message with attached reference\n/removetestgen - Removes the test generator\n/removereference - Removes the reference\n")
+        await message.answer(
+            "Moderator commands:\n"
+            "/moderhelp - Shows this message\n"
+            "/moderlist - Get the list of all moderators\n"
+            "/addmoder <username> - Add a new moderator\n"
+            "/removemoder <username> - Remove a moderator\n"
+            "/whatsmissing - Shows what is not uploaded to the bot: test generator or reference\n"
+            "/uploadtestgen - You need to perform this command only in the message with attached test generator\n"
+            "/uploadreference - You need to perform this command only in the message with attached reference\n"
+            "/removetestgen - Removes the test generator\n"
+            "/removereference - Removes the reference\n"
+            "/probelist - list all currently running probes\n"
+            "/removeprobe <username> - kill currently running probe\n"
+            "\n"
+            "Commands in dev:\n"
+            "/assignments (/list) - list assignments\n"
+            "/addassignment <assignment name> - add new assignment (🛠)\n"
+            "/refresh - reread the assignments.json (after manual change)\n"
+        )
 
     else:
         await message.answer("Sorry, but you don't have permission to perform this command")
