@@ -8,7 +8,10 @@ from ITPHelper.Core.Assignments.Exceptions import *
 from ITPHelper.Core.Assignments import RIDGenerator
 
 
-ASSIGNMENTS_FILE = "assignments.json"
+if not os.path.exists("data"): os.mkdir("data")
+
+
+ASSIGNMENTS_FILE = "data/assignments.json"
 
 
 class AssignmentsManager:
@@ -29,6 +32,10 @@ class AssignmentsManager:
         self.cached.append(new_assignment)
         await self.__writeAssignments(self.cached)
         return new_assignment
+
+    
+    async def updateAssignments(self):
+        self.cached = await self.__readAssignments()
 
 
     def __readAssignmentsSync(self) -> list[Assignment]:
@@ -52,7 +59,7 @@ class AssignmentsManager:
             async with aiofiles.open(
                 ASSIGNMENTS_FILE, 'r', encoding="utf-8"
             ) as file:
-                data = json.load(file)
+                data = json.loads(await file.read())
         if data:
             return [Assignment.from_dict(d) for d in data]
         else:

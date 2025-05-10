@@ -9,6 +9,17 @@ import ITPHelper.Utils.Config as Config
 from ITPHelper.Utils.Exceptions import *
 
 
+# utils
+
+def build_assignments_list(assignments: list) -> str:
+    return "\n".join(
+        str(assignment)
+            .replace("(", r"\(`") # for markdown coolness
+            .replace(")", r"`\)")
+        for assignment in assignments
+    )
+
+
 @dp.message(Command("removereference"))
 async def cmdClearReference(message: types.Message):
     if message.from_user.username in await Config.getModerators():
@@ -223,7 +234,7 @@ async def addAssignment(message: types.Message):
 
             await message.answer(
                 f"New assignment created:\n"
-                f"🛠 \(`{new_assignment.id}`\) {new_assignment.name}\n\n"
+                fr"🛠 \(`{new_assignment.id}`\) {new_assignment.name}\n\n"
                 "Consider uploading reference and testgen for it",
                 parse_mode="MarkdownV2"
             )
@@ -249,17 +260,45 @@ async def addAssignment(message: types.Message):
 async def listAssignments(message: types.Message):
     if message.from_user.username in await Config.getModerators():
         
-        assignments_list = "\n".join(
-            str(assignment)
-                .replace("(", "\(`") # for markdown coolness
-                .replace(")", "`\)")
-            for assignment in
-            assignmentsManager.cached
-        )
+        assignments_list = build_assignments_list(assignmentsManager.cached)
 
         await message.answer(
             "Here are all the assignments:\n"
             f"{assignments_list}",
+            parse_mode="MarkdownV2"
+        )
+
+    else:
+        await message.answer("Sorry, but you don't have permission to perform this command")
+
+
+@dp.message(Command("refresh"))
+async def refreshAssignments(message: types.Message):
+    if message.from_user.username in await Config.getModerators():
+
+        old = assignmentsManager.cached.copy()
+        await assignmentsManager.updateAssignments()
+        new = assignmentsManager.cached
+
+        status_message = ""
+        removed, added = ([], [])
+
+        if old != new:
+            removed = [a for a in old if a not in new]
+            added = [a for a in new if a not in old]
+        
+        if removed:
+            status_message += "Removed:\n"
+            status_message += build_assignments_list(removed)
+            status_message += "\n"
+        
+        if added:
+            status_message += "Added:\n"
+            status_message += build_assignments_list(added)
+        
+        await message.answer(
+            "Assignments List Refreshed:\n"
+            + (status_message or "Nothing New"),
             parse_mode="MarkdownV2"
         )
 
