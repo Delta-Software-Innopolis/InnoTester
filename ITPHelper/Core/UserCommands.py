@@ -89,6 +89,15 @@ async def listAssignments(message: types.Message):
     )
 
 
+@dp.message(Command("help"))
+async def cmdHelp(message: types.Message):
+    await message.answer(
+        "Available commands:\n"
+        "`/assignment <id>` \- choose assignment to test on\n"
+        "/list \- show all active assignments",
+        parse_mode="MarkdownV2"
+    )
+
 
 @dp.message()
 async def anyMessage(message: types.Message, state: FSMContext):
