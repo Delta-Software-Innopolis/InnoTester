@@ -6,9 +6,9 @@ import shutil
 from io import BytesIO
 
 
-from ITPHelper.Core.ITPHelperBot import dp, instance, assignmentsManager, codeManager
-import ITPHelper.Utils.Config as Config
-from ITPHelper.Utils.Exceptions import *
+from InnoTester.Core.InnoTesterBot import dp, instance, assignmentsManager, codeManager
+import InnoTester.Utils.Config as Config
+from InnoTester.Utils.Exceptions import *
 
 
 # utils

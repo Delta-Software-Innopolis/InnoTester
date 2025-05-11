@@ -10,9 +10,9 @@ import os
 import shutil
 
 
-from ITPHelper.Core.ITPHelperBot import *
-from ITPHelper.Utils.Exceptions import *
-import ITPHelper.Utils.Config as Config
+from InnoTester.Core.InnoTesterBot import *
+from InnoTester.Utils.Exceptions import *
+import InnoTester.Utils.Config as Config
 
 
 # utils

@@ -1,8 +1,8 @@
 from aiogram import Bot, Dispatcher
-from ITPHelper.Utils.Logger import Logger
-import ITPHelper.Utils.Config as Config
+from InnoTester.Utils.Logger import Logger
+import InnoTester.Utils.Config as Config
 
-from ITPHelper.Core.Assignments import AssignmentsManager, CodeManager
+from InnoTester.Core.Assignments import AssignmentsManager, CodeManager
 
 
 class ITPHelperBot(Bot):

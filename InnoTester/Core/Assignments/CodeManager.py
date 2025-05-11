@@ -4,8 +4,8 @@ import json
 import asyncio
 from typing import Literal
 
-from ITPHelper.Core.Assignments.Models import *
-from ITPHelper.Core.Assignments.Exceptions import *
+from InnoTester.Core.Assignments.Models import *
+from InnoTester.Core.Assignments.Exceptions import *
 
 
 REFERENCES_PATH = "data/references"

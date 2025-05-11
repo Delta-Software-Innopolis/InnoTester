@@ -1,8 +1,8 @@
 import os
 
-from ITPHelper.Core.ITPHelperBot import *
-from ITPHelper.Core.ModeratorCommands import *
-from ITPHelper.Core.UserCommands import *
+from InnoTester.Core.InnoTesterBot import *
+from InnoTester.Core.ModeratorCommands import *
+from InnoTester.Core.UserCommands import *
 
 
 async def start():

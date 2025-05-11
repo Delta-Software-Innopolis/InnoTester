@@ -3,9 +3,9 @@ import aiofiles
 import json
 import asyncio
 
-from ITPHelper.Core.Assignments.Models import *
-from ITPHelper.Core.Assignments.Exceptions import *
-from ITPHelper.Core.Assignments import RIDGenerator
+from InnoTester.Core.Assignments.Models import *
+from InnoTester.Core.Assignments.Exceptions import *
+from InnoTester.Core.Assignments import RIDGenerator
 
 
 if not os.path.exists("data"): os.mkdir("data")
