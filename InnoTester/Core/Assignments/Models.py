@@ -53,7 +53,7 @@ class Assignment:
             case Assignment.Status.RUNNING: status_emoji = "✅"
             case Assignment.Status.CLOSED: status_emoji = "🌙"
         return (
-            fr"{status_emoji} ({self.id}) {self.name}"
+            fr"{status_emoji} {self.name}"
         )
 
     

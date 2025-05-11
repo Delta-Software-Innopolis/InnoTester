@@ -2,7 +2,8 @@ import os
 
 from InnoTester.Core.InnoTesterBot import *
 from InnoTester.Core.ModeratorCommands import *
-from InnoTester.Core.UserCommands import *
+# from InnoTester.Core.UserCommands import *
+from InnoTester.Core.UserNewUI import *
 
 
 async def start():

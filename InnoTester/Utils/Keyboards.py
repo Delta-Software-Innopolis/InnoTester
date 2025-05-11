@@ -26,6 +26,7 @@ CHANGE_ASSIGNMENT_KB = InlineKeyboardMarkup(
 )
 
 ASSIGNMENT_CB_PREFIX = "assignment_"
+STOP_CB_PREFIX = "stop_"
 
 #endregion
 
@@ -42,5 +43,13 @@ def assigListKeyboard(
         builder.button(text=str(a), callback_data=f"{ASSIGNMENT_CB_PREFIX}{a.id}")
     builder.adjust(1, repeat=True)
     return builder.as_markup()
+
+
+def stopTestKeyboard(username: str) -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [IKB(text="Stop Testing", callback_data=f"{STOP_CB_PREFIX}{username}")]
+        ]
+    )
 
 #endregion
