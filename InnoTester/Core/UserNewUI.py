@@ -51,10 +51,15 @@ async def onChooseAssignment(query: CallbackQuery, state: FSMContext):
     assignment = await assignmentsManager.getAssignment(id)
 
     if not assignment.is_configured():
+        reference_emoji = '✅' if assignment.has_reference else '❌'
+        testgen_emoji = '✅' if assignment.has_testgen else '❌'
         await query.answer(
-            "This assignment is not yet configured :(\n"
-            "If you have a reference solution or a test generator\n"
-            "contact us, be a hero!",
+            "This assignment is not yet configured 🥺\n\n"
+            "Current status:\n"
+            f" {reference_emoji} Reference Solution\n"
+            f" {testgen_emoji} Test Generator\n\n"
+            "If YOU want to share your solution or "
+            "test generator - contact us, be a hero 😎",
             show_alert=True
         ); return
 

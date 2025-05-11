@@ -17,14 +17,6 @@ import InnoTester.Utils.Config as Config
 
 # utils
 
-def build_assignments_list(assignments: list) -> str:
-    return "\n".join(
-        str(assignment)
-            .replace("(", r"\(`") # for markdown coolness
-            .replace(")", r"`\)")
-        for assignment in assignments
-    )
-
 
 @dp.message(Command("refstat"))
 async def refStat(message: types.Message):
@@ -76,18 +68,6 @@ async def chooseAssignment(message: types.Message, state: FSMContext):
             "If YOU have the solution to the problem or a working test generator, "
             "share with us, be a hero)"
         )
-
-
-@dp.message(Command("assignments", "list"))
-async def listAssignments(message: types.Message):
-    
-    assignments_list = build_assignments_list(assignmentsManager.cached)
-
-    await message.answer(
-        "Here are all the assignments:\n"
-        f"{assignments_list}",
-        parse_mode="MarkdownV2"
-    )
 
 
 @dp.message(Command("help"))

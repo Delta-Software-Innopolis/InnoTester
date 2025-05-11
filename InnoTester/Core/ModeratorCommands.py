@@ -15,10 +15,8 @@ from InnoTester.Utils.Exceptions import *
 
 def build_assignments_list(assignments: list) -> str:
     return "\n".join(
-        str(assignment)
-            .replace("(", r"\(`") # for markdown coolness
-            .replace(")", r"`\)")
-        for assignment in assignments
+        a.to_list_with_id()
+        for a in assignments
     )
 
 
@@ -301,6 +299,23 @@ async def probeList(message: types.Message):
 
     else:
         await message.answer("Sorry, but you don't have permission to perform this command")
+
+
+@dp.message(Command("assignments", "list"))
+async def listAssignments(message: types.Message):
+    if message.from_user.username in await Config.getModerators():
+
+        assignments_list = build_assignments_list(assignmentsManager.cached)
+
+        await message.answer(
+            "Here are all the assignments:\n"
+            f"{assignments_list}",
+            parse_mode="MarkdownV2"
+        )
+
+    else:
+        await message.answer("Sorry, but you don't have permission to perform this command")
+
 
 
 @dp.message(Command("addassignment"))

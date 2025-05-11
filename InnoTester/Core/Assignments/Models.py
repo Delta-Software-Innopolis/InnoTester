@@ -56,6 +56,16 @@ class Assignment:
             fr"{status_emoji} {self.name}"
         )
 
+    def to_list_with_id(self) -> str:
+        status_emoji = None
+        match self.status:
+            case Assignment.Status.NOTCONFIGURED: status_emoji = "🛠"
+            case Assignment.Status.RUNNING: status_emoji = "✅"
+            case Assignment.Status.CLOSED: status_emoji = "🌙"
+        return (
+            fr"{status_emoji} \(`{self.id}`\) {self.name}"
+        )
+
     
 @dataclass
 class CodeRecord:
