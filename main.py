@@ -1,9 +1,9 @@
 import asyncio
-import ITPHelper
+import InnoTester
 
 
 async def main():
-    await ITPHelper.start()
+    await InnoTester.start()
 
 
 if __name__ == "__main__":
