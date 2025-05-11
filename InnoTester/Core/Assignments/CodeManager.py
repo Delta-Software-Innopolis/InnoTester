@@ -59,6 +59,27 @@ class CodeManager:
         await self.__writeCode("testgens", new_testgen, code)
         return new_testgen
 
+    
+    async def removeReference(self, reference: Reference):
+        os.remove(f"data/references/{reference.id}.{reference.ext}")
+        for i, ref in enumerate(self.references):
+            if (ref.id, ref.assignment_id) == (reference.id, reference.assignment_id):
+                del self.references[i]
+        await self.__writeJSON("references", self.references)
+
+
+    async def removeTestGen(self, testgen: TestGen):
+        os.remove(f"data/testgens/{testgen.id}.{testgen.ext}")
+        for i, tg in enumerate(self.testgens):
+            if (tg.id, tg.assignment_id) == (testgen.id, testgen.assignment_id):
+                del self.testgens[i]
+        await self.__writeJSON("testgens", self.testgens)
+
+
+    async def updateAll(self):
+        self.references = await self.__readJSON("references")
+        self.testgens = await self.__readJSON("testgens")
+
 
     def __readJSONSync(self, which: Literal["references", "testgens"]) -> list[CodeRecord]:
         data = []; path = f"data/{which}.json"

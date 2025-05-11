@@ -29,7 +29,7 @@ class AssignmentsManager:
             name=name,
             status=Assignment.Status.NOTCONFIGURED
         )
-        self.cached.append(new_assignment)
+        self.cached.insert(0, new_assignment) # newer assignments to the top of the list
         await self.__writeAssignments(self.cached)
         return new_assignment
 

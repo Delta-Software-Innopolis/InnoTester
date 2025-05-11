@@ -20,35 +20,94 @@ def build_assignments_list(assignments: list) -> str:
     )
 
 
-@dp.message(Command("removereference"))
+# handlers
+
+
+@dp.message(Command("removereference", "removeref"))
 async def cmdClearReference(message: types.Message):
     if message.from_user.username in await Config.getModerators():
-        filename = "reference." + Config.getLanguage("reference")
 
-        if os.path.exists(filename):
-            os.remove(filename)
-            await message.answer("Reference was removed successfully")
-        else:
-            await message.answer("Reference was not uploaded. Ignoring this command.")
+        if len(message.text.split()) != 2:
+            await message.answer(
+                "Usage:\n"
+                "`/removereference <assignment_id>`\n"
+                "Use /list to see all the assignments",
+                parse_mode="MarkdownV2"
+            ); return
+
+        id = message.text.split()[1]
+
+        try:
+            reference = await codeManager.getReference(id)
+            await codeManager.removeReference(reference)
+
+            assignment = await assignmentsManager.getAssignment(id)
+            assignment.has_reference = False
+            assignment.reference_id = None
+            assignment.status = assignment.Status.NOTCONFIGURED
+            await assignmentsManager.setAssignment(assignment)
+
+            await message.answer(
+                f"Reference \(`{id}`\) removed successfuly",
+                parse_mode="MarkdownV2"
+            )
+        except CodeRecordNotFound:
+            await message.answer("Reference not found :(")
+        except AssignmentNotFound:
+            await message.answer("Corresponding assignment not found :(")
+
+        except Exception as e:
+            await message.answer(
+                "Something went wrong:\n"
+                f"{str(e)}"
+            )
     else:
         await message.answer("Sorry, but you don't have permission to perform this command")
 
 
-@dp.message(Command("removetestgen"))
+@dp.message(Command("removetestgen", "removetg"))
 async def cmdClearTestGen(message: types.Message):
     if message.from_user.username in await Config.getModerators():
-        filename = "testgen." + Config.getLanguage("testgen")
 
-        if os.path.exists(filename):
-            os.remove(filename)
-            await message.answer("Test generator was removed successfully")
-        else:
-            await message.answer("Test generator was not uploaded. Ignoring this command.")
+        if len(message.text.split()) != 2:
+            await message.answer(
+                "Usage:\n"
+                "`/removetestgen <assignment_id>`\n"
+                "Use /list to see all the assignments",
+                parse_mode="MarkdownV2"
+            ); return
+
+        id = message.text.split()[1]
+
+        try:
+            testgen = await codeManager.getTestGen(id)
+            await codeManager.removeTestGen(testgen)
+
+            assignment = await assignmentsManager.getAssignment(id)
+            assignment.has_testgen = False
+            assignment.testgen_id = None
+            assignment.status = assignment.Status.NOTCONFIGURED
+            await assignmentsManager.setAssignment(assignment)
+
+            await message.answer(
+                f"TestGen \(`{id}`\) removed successfuly",
+                parse_mode="MarkdownV2"
+            )
+        except CodeRecordNotFound:
+            await message.answer("TestGen not found :(")
+        except AssignmentNotFound:
+            await message.answer("Corresponding assignment not found :(")
+
+        except Exception as e:
+            await message.answer(
+                "Something went wrong:\n"
+                f"{str(e)}"
+            )
     else:
         await message.answer("Sorry, but you don't have permission to perform this command")
 
 
-@dp.message(Command("uploadreference"))
+@dp.message(Command("uploadreference", "ureference", "uref", "aref"))
 async def uploadReference(message: types.Message):
     if message.from_user.username in await Config.getModerators():
 
@@ -100,7 +159,7 @@ async def uploadReference(message: types.Message):
         await message.answer("Sorry, but you don't have permission to perform this command")
 
 
-@dp.message(Command("uploadtestgen"))
+@dp.message(Command("uploadtestgen", "utestgen", "utg", "atg"))
 async def uploadTestGen(message: types.Message):
     if message.from_user.username in await Config.getModerators():
         if (caption := message.caption) == None or len(caption.split()) != 2:
@@ -149,40 +208,7 @@ async def uploadTestGen(message: types.Message):
         await message.answer("Sorry, but you don't have permission to perform this command")
 
 
-@dp.message(Command("whatsmissing"))
-async def whatsMissing(message: types.Message):
-    if message.from_user.username in await Config.getModerators():
-        if not os.path.exists("testgen." + Config.getLanguage("testgen")):
-            await message.answer("Test generator")
-
-        if not os.path.exists("reference." + Config.getLanguage("reference")):
-            await message.answer("Reference")
-    else:
-        await message.answer("Sorry, but you don't have permission to perform this command")
-
-
-@dp.message(Command("assignnum"))
-async def updateAssign(message: types.Message):
-    if message.from_user.username in await Config.getModerators():
-        args = message.text.split()
-
-        if len(args) == 1:
-            await message.answer("Usage: /assignnum <number>")
-        else:
-            try:
-                if not (1 <= int(args[1])):
-                    await message.answer("Assignment number should be positive")
-                    return
-
-                await Config.updateAssignNum(int(args[1]))
-                await message.answer("Assignment number was updated")
-            except ValueError:
-                await message.answer("Argument 1 should be a number")
-    else:
-        await message.answer("Sorry, but you don't have permission to perform this command")
-
-
-@dp.message(Command("addmoder"))
+@dp.message(Command("addmoder", "amoder"))
 async def addModer(message: types.Message):
     if message.from_user.username in await Config.getModerators():
         args = message.text.split()
@@ -230,7 +256,7 @@ async def removeModer(message: types.Message):
         await message.answer("Sorry, but you don't have permission to perform this command")
 
 
-@dp.message(Command("moderlist"))
+@dp.message(Command("moderlist", "mlist"))
 async def moderList(message: types.Message):
     if message.from_user.username in await Config.getModerators():
         msg = "Moderators:\n"
@@ -243,7 +269,7 @@ async def moderList(message: types.Message):
         await message.answer("Sorry, but you don't have permission to perform this command")
 
 
-@dp.message(Command("moderhelp"))
+@dp.message(Command("moderhelp", "mhelp"))
 async def moderHelp(message: types.Message):
     if message.from_user.username in await Config.getModerators():
         await message.answer(
@@ -252,10 +278,6 @@ async def moderHelp(message: types.Message):
             "/moderlist - Get the list of all moderators\n"
             "/addmoder <username> - Add a new moderator\n"
             "/removemoder <username> - Remove a moderator\n"
-            "/whatsmissing - Shows what is not uploaded to the bot: test generator or reference\n"
-            "/uploadtestgen - You need to perform this command only in the message with attached test generator\n"
-            "/removetestgen - Removes the test generator\n"
-            "/removereference - Removes the reference\n"
             "/probelist - list all currently running probes\n"
             "/removeprobe <username> - kill currently running probe\n"
             "\n"
@@ -264,13 +286,16 @@ async def moderHelp(message: types.Message):
             "/addassignment <assignment name> - add new assignment (🛠)\n"
             "/refresh - reread the .json files (after manual change)\n"
             "/uploadreference <assignment id> - You need to perform this command only in the message with attached reference\n"
+            "/uploadtestgen <assignment id> - You need to perform this command only in the message with attached test generator\n"
+            "/removetestgen <assignment id> - Removes the test generator\n"
+            "/removereference <assignment id> - Removes the reference\n"
         )
 
     else:
         await message.answer("Sorry, but you don't have permission to perform this command")
 
 
-@dp.message(Command("removeprobe"))
+@dp.message(Command("removeprobe", "rprobe"))
 async def removeProbe(message: types.Message):
     if message.from_user.username in await Config.getModerators():
         args = message.text.split()
@@ -288,7 +313,7 @@ async def removeProbe(message: types.Message):
         await message.answer("Sorry, but you don't have permission to perform this command")
 
 
-@dp.message(Command("probelist"))
+@dp.message(Command("probelist", "probes"))
 async def probeList(message: types.Message):
     if message.from_user.username in await Config.getModerators():
         msg = "Probes:\n"
@@ -318,7 +343,7 @@ async def listAssignments(message: types.Message):
 
 
 
-@dp.message(Command("addassignment"))
+@dp.message(Command("addassignment", "adda"))
 async def addAssignment(message: types.Message):
     if message.from_user.username in await Config.getModerators():
         try:
