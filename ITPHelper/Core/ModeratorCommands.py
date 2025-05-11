@@ -74,6 +74,7 @@ async def uploadReference(message: types.Message):
             assignment = await assignmentsManager.getAssignment(id)
 
             file = await instance.get_file(message.document.file_id)
+
             io_code = BytesIO()
             await instance.download_file(file.file_path, io_code)
             code = io_code.read().decode("utf-8")

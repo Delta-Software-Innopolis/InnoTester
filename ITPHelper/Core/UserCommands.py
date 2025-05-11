@@ -62,6 +62,7 @@ async def chooseAssignment(message: types.Message, state: FSMContext):
             +"\nNow you can send the code",
             parse_mode="MarkdownV2"
         )
+
     except AssignmentNotFound:
         await message.answer(
             f"Assignment with id `{id}` not found\n"
