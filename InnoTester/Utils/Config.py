@@ -2,6 +2,7 @@ import aiofiles
 import os
 import sys
 import yaml
+import aiodocker
 
 from aiogram.utils.formatting import *
 
@@ -24,8 +25,8 @@ with open("banlist.yaml") as f:
     banlist = yaml.safe_load(f)['banned']
 
 
-def getLanguage(filename):
-    for file in os.listdir("."):
+def getLanguage(filename, dir = "."):
+    for file in os.listdir(dir):
         name = file.split(".")[0]
         extension = file.split(".")[-1]
 
