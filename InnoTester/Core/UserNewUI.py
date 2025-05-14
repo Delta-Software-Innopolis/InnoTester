@@ -219,7 +219,10 @@ async def onDocument(message: Message, state: FSMContext):
             )
             shutil.rmtree(f"probes/{message.from_user.username}", ignore_errors=True)
             del data["testing_killed"]
+
             await state.set_data(data)
+            await dockerClient.close()
+
             return
 
         if result['StatusCode'] != 0:
@@ -266,6 +269,7 @@ async def onDocument(message: Message, state: FSMContext):
         )
 
     shutil.rmtree(f"probes/{message.from_user.username}", ignore_errors=True)
+    await dockerClient.close()
 
 
 
