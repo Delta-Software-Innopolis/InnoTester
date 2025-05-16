@@ -3,7 +3,7 @@ import aiofiles
 import os
 import shutil
 from aiogram import F
-from aiogram.filters import Command, CommandStart
+from aiogram.filters import Command, CommandStart, StateFilter
 from aiogram.types import Message, CallbackQuery
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import StatesGroup, State
@@ -17,8 +17,16 @@ import aiodocker
 import aiodocker.exceptions
 
 
+class ShareStates(StatesGroup):
+    CHOOSE_ASSIGNMENT = State()
+    SEND_REFERENCE = State()
+    SEND_TESTGEN = State()
+
+
 @dp.message(CommandStart())
 async def onCmdStart(message: Message, state: FSMContext):
+    await state.set_state(None) # to revert the ShareStates
+
     data = await state.get_data()
     
     last_message: Message = data.get("last_message")
@@ -31,6 +39,156 @@ async def onCmdStart(message: Message, state: FSMContext):
 
     data["last_message"] = last_message
     await state.set_data(data)
+
+
+@dp.message(Command("share"))
+async def onCmdShare(message: Message, state: FSMContext):
+    data = await state.get_data()
+
+    last_message: Message = data.get("last_message")
+    if last_message: await last_message.delete()
+
+    assignment: Assignment = data.get("assignment")
+
+    if assignment:
+        last_message = await message.answer(
+            text=(
+                "Wanna share?\n"
+                f"Chosen: {assignment}\n\n"
+                "What are you sharing, fellow coder?"
+            ),
+            reply_markup=SHARE_KB
+        )
+    else:
+        last_message = await message.answer(
+            text=(
+                "Wanna share?\n"
+                "Choose the Assignment first"
+            ),
+            reply_markup=CHOOSE_ASSIGNMENT_SHARE_KB
+        )
+
+    data["last_message"] = last_message
+    await state.set_data(data)
+
+
+@dp.callback_query(F.data == SHARE_TESTGEN_CB)
+async def onShareTestGenButton(query: CallbackQuery, state: FSMContext):
+    data = await state.get_data()
+    data["last_message"] = query.message
+
+    await state.set_state(ShareStates.SEND_TESTGEN)
+
+    await query.message.edit_text(
+        "Now please, send the send the TestGen code as a file",
+        reply_markup=SHARE_CANCEL_KB
+    )
+
+
+@dp.callback_query(F.data == SHARE_REFERENCE_CB)
+async def onShareReferenceButton(query: CallbackQuery, state: FSMContext):
+    data = await state.get_data()
+    data["last_message"] = query.message
+
+    await state.set_state(ShareStates.SEND_REFERENCE)
+
+    await query.message.edit_text(
+        "Now please, send the send the Reference code as a file",
+        reply_markup=SHARE_CANCEL_KB
+    )
+
+
+@dp.message(StateFilter(ShareStates.SEND_REFERENCE), F.document)
+async def onShareReferenceDocument(message: Message, state: FSMContext):
+    data = await state.get_data()
+
+    last_message: Message = data["last_message"]
+    if last_message: await last_message.delete()
+
+    # TODO : add verificitaion of username != None
+
+    last_message = await message.answer(
+        "Thanks, hero!\n"
+        "We'll review your code and send "
+        "you the acceptance verdict afterwards\n\n"
+        "Stay tuned :)"
+    )
+
+    for moder in await Config.getModerators(): # TODO: make moderators.txt store ids
+        await instance.send_document(          #       then make that thing work
+            message.from_user.id,
+            caption=(
+                "One hero want to share his Reference!\n"
+            f"@{message.from_user.username}\n"
+            ),
+            document=message.document.file_id
+        )
+        break
+
+    data["last_message"] = last_message
+    await state.set_data(data)
+
+    await state.set_state(None)
+
+
+@dp.message(StateFilter(ShareStates.SEND_TESTGEN), F.document)
+async def onShareTestGenDocument(message: Message, state: FSMContext):
+    data = await state.get_data()
+
+    last_message: Message = data["last_message"]
+    if last_message: await last_message.delete()
+
+    # TODO : add verificitaion of username != None
+
+    last_message = await message.answer(
+        "Thanks, hero!\n"
+        "We'll review your code and send "
+        "you the acceptance verdict afterwards\n\n"
+        "Stay tuned :)"
+    )
+
+    for moder in await Config.getModerators(): # TODO: make moderators.txt store ids
+        await instance.send_document(          #       then make that thing work
+            message.from_user.id,
+            caption=(
+                "One hero want to share his TestGen!\n"
+            f"@{message.from_user.username}\n"
+            ),
+            document=message.document.file_id
+        )
+        break
+
+    data["last_message"] = last_message
+    await state.set_data(data)
+
+    await state.set_state(None)
+
+
+@dp.callback_query(F.data == SHARE_CANCEL_CB)
+async def onCancelShare(query: CallbackQuery, state: FSMContext):
+    data = await state.get_data()
+    data["last_message"] = query.message
+
+    await state.set_state(None)
+    assignment: Assignment = data.get("assignment")
+
+    if assignment:
+        await query.message.edit_text(
+            text=(
+                "Wanna share?\n"
+                f"Chosen: {assignment}\n\n"
+                "What are you sharing, fellow coder?"
+            ),
+            reply_markup=SHARE_KB
+        )
+    else:
+        await query.message.edit_text(
+            text=(
+                "Wanna share?\n"
+                "Choose the Assignment first"
+            ),
+            reply_markup=CHOOSE_ASSIGNMENT_SHARE_KB
+        )
 
 
 @dp.callback_query(F.data == CHOOSE_ASSIGNMENT_CB)
@@ -50,6 +208,35 @@ async def onOpenAssignmentsList(query: CallbackQuery, state: FSMContext):
     )
 
 
+@dp.callback_query(F.data == CHOOSE_ASSIGNMENT_SHARE_CB)
+async def onOpenAssignmentsListForShare(query: CallbackQuery, state: FSMContext):
+    await state.set_state(ShareStates.CHOOSE_ASSIGNMENT)
+    await onOpenAssignmentsList(query, state)
+
+
+@dp.callback_query(
+    StateFilter(ShareStates.CHOOSE_ASSIGNMENT),
+    F.data.startswith(ASSIGNMENT_CB_PREFIX))
+async def onChooseAssignmentForShare(query: CallbackQuery, state: FSMContext):
+    data = await state.get_data()
+    data["last_message"] = query.message
+
+    id = query.data.split("_")[1]
+    assignment = await assignmentsManager.getAssignment(id)
+
+    data["assignment"] = assignment
+    await state.set_data(data)
+
+    await query.message.edit_text(
+        text=(
+           f"Chosen: {assignment}\n\n"
+            "What are you sharing, fellow coder?"
+        ),
+        reply_markup=SHARE_KB
+    )
+    await state.set_state(None)
+
+
 @dp.callback_query(F.data.startswith(ASSIGNMENT_CB_PREFIX))
 async def onChooseAssignment(query: CallbackQuery, state: FSMContext):
     data = await state.get_data()
@@ -67,7 +254,7 @@ async def onChooseAssignment(query: CallbackQuery, state: FSMContext):
             f" {reference_emoji} Reference Solution\n"
             f" {testgen_emoji} Test Generator\n\n"
             "If YOU want to share your solution or "
-            "test generator - contact us, be a hero 😎",
+            "test generator - type /share, be a hero 😎",
             show_alert=True
         ); return
 
@@ -85,8 +272,8 @@ async def onChooseAssignment(query: CallbackQuery, state: FSMContext):
 
 
 @dp.message(F.document)
-async def onDocument(message: Message, state: FSMContext):
-    dockerClient = aiodocker.Docker()
+async def onDocument(message: Message, state: FSMContext): # TODO: please, handle should not be
+    dockerClient = aiodocker.Docker()                      #               93 lines of code XD
     data = await state.get_data()
 
     assignment = data.get("assignment")
@@ -156,10 +343,10 @@ async def onDocument(message: Message, state: FSMContext):
             await iters.write("100")
 
     async with aiofiles.open(f"probes/{message.from_user.username}/protocol.txt", "w") as proto:
-        await proto.write("");
+        await proto.write("")
 
     async with aiofiles.open(f"probes/{message.from_user.username}/comparison_page.html", "w") as proto:
-        await proto.write("");
+        await proto.write("")
 
     last_message = await message.answer(
         text=(
