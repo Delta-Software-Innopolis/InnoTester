@@ -13,16 +13,16 @@ if len(sys.argv) == 1:
 
 dockerImageNum = sys.argv[1]
 
-with open("token.yaml") as f:
+with open("resources/token.yaml") as f:
     token = yaml.safe_load(f)["token"]
 
-with open("compile.yaml") as f:
+with open("resources/compile.yaml") as f:
     compileCommands = yaml.safe_load(f)
 
-with open("messages.yaml") as f:
+with open("resources/messages.yaml") as f:
     messages = yaml.safe_load(f)
 
-with open("banlist.yaml") as f:
+with open("resources/banlist.yaml") as f:
     banlist = yaml.safe_load(f)['banned']
 
 
@@ -37,18 +37,18 @@ def getLanguage(filename, dir = "."):
     return "undefined"
 
 
-async def getWhoLoaded():
+async def getWhoLoaded(): # TODO: remove (deprecated)
     async with aiofiles.open("assign.txt") as f:
         await f.readline()
         return await f.readline()
 
 
-def checkReady():
+def checkReady(): # TODO: remove (deprecated)
     return os.path.exists("testgen." + getLanguage("testgen")) and os.path.exists(
         "reference." + getLanguage("reference"))
 
 
-async def updateWhoLoaded(username):
+async def updateWhoLoaded(username): # TODO: remove (deprecated)
     async with aiofiles.open("assign.txt") as f:
         assignNum = int(await f.readline())
 
@@ -57,7 +57,7 @@ async def updateWhoLoaded(username):
         await f.write(text)
 
 
-async def updateAssignNum(num):
+async def updateAssignNum(num): # TODO: remove (deprecated)
     async with aiofiles.open("assign.txt") as f:
         await f.readline()
         moder = await f.readline()
@@ -75,22 +75,26 @@ async def getModerators(get_usernames: bool = True) -> list[tuple[int, str]]: ..
 async def getModerators(get_usernames: bool = False) -> list[int] | list[tuple[int, str]]:
     """ Returns the list of user_ids or usernames from moderators.txt"""
 
-    async with aiofiles.open("moderators.txt") as f:
+    async with aiofiles.open("resources/moderators.txt", 'r') as f: # TODO: add asyncio Locking
         moders = list(map(lambda x: x.strip("\n").split(' @'), await f.readlines()))
         moders = [(int(id), username) for id, username in moders]
         if not get_usernames: moders = [m[0] for m in moders]
         return moders
 
 
-async def getAssignNum():
+async def getAssignNum():  # TODO: remove (deprecated)
     async with aiofiles.open("assign.txt") as f:
         return await f.readline()
 
 
-def errorHanler(protocol, testCount: int):
+def errorHandler(protocol, testCount: int):
     match (protocol[0].strip("\n")):
         case "ok":
-            return Text(f"All {testCount} tests have been passed successfully. This does not mean at all that your program 100% will pass all Codeforces tests. We recommend running a few more checks to make sure that the program is really working correctly.")
+            return Text(
+                f"All {testCount} tests have been passed successfully."
+                "This does not mean at all that your program 100% will pass all Codeforces tests."
+                "We recommend running a few more checks to make sure that the program is really working correctly."
+            )
         case "error":
             match (protocol[1].strip("\n")):
                 case "running":

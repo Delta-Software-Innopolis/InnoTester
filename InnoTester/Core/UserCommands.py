@@ -1,3 +1,5 @@
+# TODO : remove that module (deprecated)
+
 from aiogram import types, F
 from aiogram.fsm.context import FSMContext
 from aiogram.enums import ParseMode
@@ -155,7 +157,7 @@ async def anyMessage(message: types.Message, state: FSMContext):
                 ans = await proto.readlines()
                 await logger.info(f"Finished testing {message.from_user.username}'s solution: {''.join(ans)}")
                 try:
-                    await message.answer(**Config.errorHanler(ans, testCount).as_kwargs())
+                    await message.answer(**Config.errorHandler(ans, testCount).as_kwargs())
                 except TelegramBadRequest as e:
                     protocol = FSInputFile(f"probes/{message.from_user.username}/protocol.txt")
                     await message.answer_document(protocol)

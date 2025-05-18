@@ -300,7 +300,7 @@ async def onDocument(message: Message, state: FSMContext): # TODO: please, handl
             "Set one in the Telegram settings to proceed"
         ); return
 
-    if os.path.exists("probes/" + message.from_user.username):
+    if os.path.exists("probes/" + message.from_user.username): # TODO : "data/probes"
         await last_message.edit_text(
             text=(
                 "Testing started\n"
@@ -341,12 +341,12 @@ async def onDocument(message: Message, state: FSMContext): # TODO: please, handl
         return
 
     await logger.info(f"{message.from_user.username} started testing solution ({probeExtension})")
-    os.mkdir("probes/" + message.from_user.username)
-    await instance.download_file(path, f"probes/{message.from_user.username}/probe.{probeExtension}")
+    os.mkdir("probes/" + message.from_user.username) # TODO : "data/probes"
+    await instance.download_file(path, f"probes/{message.from_user.username}/probe.{probeExtension}") # TODO : "data/probes"
 
     testCount = 100
 
-    async with aiofiles.open(f"probes/{message.from_user.username}/iterations.txt", "w") as iters:
+    async with aiofiles.open(f"probes/{message.from_user.username}/iterations.txt", "w") as iters: # TODO : "data/probes"
         if message.caption is not None:
             try:
                 await iters.write(f"{int(message.caption)}")
@@ -356,10 +356,10 @@ async def onDocument(message: Message, state: FSMContext): # TODO: please, handl
         else:
             await iters.write("100")
 
-    async with aiofiles.open(f"probes/{message.from_user.username}/protocol.txt", "w") as proto:
+    async with aiofiles.open(f"probes/{message.from_user.username}/protocol.txt", "w") as proto: # TODO : "data/probes"
         await proto.write("")
 
-    async with aiofiles.open(f"probes/{message.from_user.username}/comparison_page.html", "w") as proto:
+    async with aiofiles.open(f"probes/{message.from_user.username}/comparison_page.html", "w") as proto: # TODO : "data/probes"
         await proto.write("")
 
     last_message = await message.answer(
@@ -386,12 +386,12 @@ async def onDocument(message: Message, state: FSMContext): # TODO: please, handl
             "Memory": 256 * 1024 * 1024,  # 256MB
             "Binds": [
                 f"{pwd}/compile.yaml:/testEnv/compile.yaml",
-                f"{pwd}/probes/{username}/probe.{probeExtension}:/testEnv/probe.{probeExtension}",
+                f"{pwd}/probes/{username}/probe.{probeExtension}:/testEnv/probe.{probeExtension}", # TODO : "data/probes"
                 f"{pwd}/data/references/{data['assignment'].reference_id}.{referenceExtension}:/testEnv/reference.{referenceExtension}",
                 f"{pwd}/data/testgens/{data['assignment'].testgen_id}.{testgenExtension}:/testEnv/testgen.{testgenExtension}",
-                f"{pwd}/probes/{username}/protocol.txt:/testEnv/protocol.txt",
-                f"{pwd}/probes/{username}/comparison_page.html:/testEnv/comparison_page.html",
-                f"{pwd}/probes/{username}/iterations.txt:/testEnv/iterations.txt",
+                f"{pwd}/probes/{username}/protocol.txt:/testEnv/protocol.txt", # TODO : "data/probes"
+                f"{pwd}/probes/{username}/comparison_page.html:/testEnv/comparison_page.html", # TODO : "data/probes"
+                f"{pwd}/probes/{username}/iterations.txt:/testEnv/iterations.txt", # TODO : "data/probes"
             ],
         },
         "WorkingDir": "/testEnv",
@@ -418,7 +418,7 @@ async def onDocument(message: Message, state: FSMContext): # TODO: please, handl
                 ),
                 reply_markup=CHANGE_ASSIGNMENT_KB
             )
-            shutil.rmtree(f"probes/{message.from_user.username}", ignore_errors=True)
+            shutil.rmtree(f"probes/{message.from_user.username}", ignore_errors=True) # TODO : "data/probes"
             del data["testing_killed"]
 
             await state.set_data(data)
@@ -435,20 +435,20 @@ async def onDocument(message: Message, state: FSMContext): # TODO: please, handl
                 reply_markup=CHANGE_ASSIGNMENT_KB
             )
         else:
-            async with aiofiles.open(f"probes/{message.from_user.username}/protocol.txt") as proto:
+            async with aiofiles.open(f"probes/{message.from_user.username}/protocol.txt") as proto: # TODO : "data/probes"
                 ans = await proto.readlines()
                 await logger.info(f"Finished testing {message.from_user.username}'s solution: {''.join(ans)}")
                 try:
-                    await last_message.edit_text(**Config.errorHanler(ans, testCount).as_kwargs(), reply_markup=CHANGE_ASSIGNMENT_KB)
+                    await last_message.edit_text(**Config.errorHandler(ans, testCount).as_kwargs(), reply_markup=CHANGE_ASSIGNMENT_KB)
                 except TelegramBadRequest as e:
-                    protocol = FSInputFile(f"probes/{message.from_user.username}/protocol.txt")
+                    protocol = FSInputFile(f"probes/{message.from_user.username}/protocol.txt") # TODO : "data/probes"
                     await message.answer_document(protocol)
 
-            async with aiofiles.open(f"probes/{message.from_user.username}/comparison_page.html") as comparison:
+            async with aiofiles.open(f"probes/{message.from_user.username}/comparison_page.html") as comparison: # TODO : "data/probes"
                 comp = await comparison.readlines()
 
                 if len(comp) != 0:
-                    compPage = FSInputFile(f"probes/{message.from_user.username}/comparison_page.html")
+                    compPage = FSInputFile(f"probes/{message.from_user.username}/comparison_page.html") # TODO : "data/probes"
                     await message.answer_document(compPage)
 
 
@@ -469,7 +469,7 @@ async def onDocument(message: Message, state: FSMContext): # TODO: please, handl
             reply_markup=CHANGE_ASSIGNMENT_KB
         )
 
-    shutil.rmtree(f"probes/{message.from_user.username}", ignore_errors=True)
+    shutil.rmtree(f"probes/{message.from_user.username}", ignore_errors=True) # TODO : "data/probes"
     await dockerClient.close()
 
 

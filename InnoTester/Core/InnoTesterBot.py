@@ -12,7 +12,7 @@ class InnoTesterBot(Bot):
 
 instance = InnoTesterBot()
 dp = Dispatcher()
-logger = Logger("log.txt")
+logger = Logger("data/log.txt")
 
 assignmentsManager = AssignmentsManager()
 codeManager = CodeManager()

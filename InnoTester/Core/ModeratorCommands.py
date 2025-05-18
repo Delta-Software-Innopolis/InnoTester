@@ -1,14 +1,16 @@
 from aiogram import types
 from aiogram.exceptions import TelegramBadRequest
 from aiogram.filters.command import Command
-from aiogram.utils.formatting import Code, Text
+from aiogram.utils.formatting import Code
 import aiofiles
 import os
 import shutil
 from io import BytesIO
 
 
-from InnoTester.Core.InnoTesterBot import dp, instance, assignmentsManager, codeManager
+from InnoTester.Core.InnoTesterBot import (
+    dp, instance, assignmentsManager, codeManager
+)
 import InnoTester.Utils.Config as Config
 from InnoTester.Utils.Exceptions import *
 
@@ -274,8 +276,8 @@ async def removeModer(message: types.Message):
 
             removed = ("id-here", "username-here")
 
-            async with aiofiles.open("moderators.txt", "w") as mods: # TODO : make it asyncio Lock'ed
-                data = ""
+            async with aiofiles.open("data/moderators.txt", "w") as mods: # TODO : make it asyncio Lock'ed
+                data = ""                                                 # TODO : move the logic out of handler
 
                 for id, username in moders:
                     if identifier in (id, username):
@@ -341,8 +343,8 @@ async def removeProbe(message: types.Message):
         if len(args) == 1:
             await message.answer("Usage: /removeprobe <username>")
         else:
-            if os.path.exists(f"probes/{args[1]}"):
-                shutil.rmtree(f"probes/{args[1]}")
+            if os.path.exists(f"probes/{args[1]}"): # TODO : "data/probes"
+                shutil.rmtree(f"probes/{args[1]}")  # TODO : "data/probes"
                 await message.answer("Probe was removed successfully")
             else:
                 await message.answer("Such probe does not exists")
@@ -355,7 +357,7 @@ async def removeProbe(message: types.Message):
 async def probeList(message: types.Message):
     if message.from_user.id in await Config.getModerators():
         msg = "Probes:\n"
-        for probe in os.listdir("probes"):
+        for probe in os.listdir("probes"): # TODO : "data/probes"
             msg += probe + "\n"
 
         await message.answer(msg)
