@@ -19,6 +19,12 @@ def createTemplateIfNotExists(
     file_path: str,
     template: str
 ):
+    """ 
+    Ensures that file exists (in `file_path`) \\
+    If not:
+    - creates file
+    - writes `template` into it
+    """
     if not os.path.exists(file_path):
         with open(file_path, 'w') as f:
             f.write(template)
@@ -65,53 +71,10 @@ with open("resources/moderators.txt") as f:
         print("Set main moderator (./resources/moderators.txt)")
         quit(1)
 
-
 with open("resources/banlist.yaml") as f:
     banlist = yaml.safe_load(f)['banned']
     if "user-id" in banlist:
         banlist.remove("user-id")
-
-
-
-def getLanguage(filename, dir = "."): # TODO : remove (deprecated)
-    for file in os.listdir(dir):
-        name = file.split(".")[0]
-        extension = file.split(".")[-1]
-
-        if filename == name:
-            return extension
-
-    return "undefined"
-
-
-async def getWhoLoaded(): # TODO: remove (deprecated)
-    async with aiofiles.open("assign.txt") as f:
-        await f.readline()
-        return await f.readline()
-
-
-def checkReady(): # TODO: remove (deprecated)
-    return os.path.exists("testgen." + getLanguage("testgen")) and os.path.exists(
-        "reference." + getLanguage("reference"))
-
-
-async def updateWhoLoaded(username): # TODO: remove (deprecated)
-    async with aiofiles.open("assign.txt") as f:
-        assignNum = int(await f.readline())
-
-    async with aiofiles.open("assign.txt", "w") as f:
-        text = f"{assignNum}\n{username}"
-        await f.write(text)
-
-
-async def updateAssignNum(num): # TODO: remove (deprecated)
-    async with aiofiles.open("assign.txt") as f:
-        await f.readline()
-        moder = await f.readline()
-
-    async with aiofiles.open("assign.txt", "w") as f:
-        text = f"{num}\n{moder}"
-        await f.write(text)
 
 
 @overload
@@ -127,11 +90,6 @@ async def getModerators(get_usernames: bool = False) -> list[int] | list[tuple[i
         moders = [(int(id), username) for id, username in moders]
         if not get_usernames: moders = [m[0] for m in moders]
         return moders
-
-
-async def getAssignNum():  # TODO: remove (deprecated)
-    async with aiofiles.open("assign.txt") as f:
-        return await f.readline()
 
 
 def errorHandler(protocol, testCount: int):

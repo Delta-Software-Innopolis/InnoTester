@@ -1,8 +1,8 @@
 import os
 
 from InnoTester.Core.InnoTesterBot import *
-from InnoTester.Core.ModeratorCommands import *
-from InnoTester.Core.UserNewUI import *
+from InnoTester.Core.ModeratorHandles import *
+from InnoTester.Core.UserHandles import *
 
 
 async def start():
