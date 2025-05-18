@@ -1,0 +1,15 @@
+resources/
+__pycache__
+venv
+.vscode
+*.txt
+reference.*
+testgen.*
+test
+token.yaml
+compile.yaml
+assign.txt
+moderators.txt
+assignments.json
+data
+start.sh
