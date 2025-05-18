@@ -105,25 +105,32 @@ async def onShareReferenceDocument(message: Message, state: FSMContext):
     last_message: Message = data["last_message"]
     if last_message: await last_message.delete()
 
+    assignment: Assignment = data.get("assignment")
+
+    if not assignment:
+        await onCmdShare(message, state)
+
     # TODO : add verificitaion of username != None
 
     last_message = await message.answer(
         "Thanks, hero!\n"
+        f"Reference sent for {assignment}\n\n"
         "We'll review your code and send "
         "you the acceptance verdict afterwards\n\n"
         "Stay tuned :)"
     )
 
-    for moder in await Config.getModerators(): # TODO: make moderators.txt store ids
-        await instance.send_document(          #       then make that thing work
-            message.from_user.id,
+    for moder_id in await Config.getModerators(): # TODO: make adding reference by buttons
+        await instance.send_document(             #       instead of manual
+            moder_id,
             caption=(
-                "One hero want to share his Reference!\n"
-            f"@{message.from_user.username}\n"
+                "One hero want to share his Reference\!\n"
+                f"{assignment.to_list_with_id()}\n"
+                f"@{message.from_user.username}\n"
             ),
-            document=message.document.file_id
+            document=message.document.file_id,
+            parse_mode="MarkdownV2"
         )
-        break
 
     data["last_message"] = last_message
     await state.set_data(data)
@@ -135,6 +142,11 @@ async def onShareReferenceDocument(message: Message, state: FSMContext):
 async def onShareTestGenDocument(message: Message, state: FSMContext):
     data = await state.get_data()
 
+    assignment : Assignment = data.get("assignment")
+
+    if not assignment:
+        await onCmdShare(message, state)
+
     last_message: Message = data["last_message"]
     if last_message: await last_message.delete()
 
@@ -142,21 +154,23 @@ async def onShareTestGenDocument(message: Message, state: FSMContext):
 
     last_message = await message.answer(
         "Thanks, hero!\n"
+        f"TestGen sent for {assignment}\n\n"
         "We'll review your code and send "
         "you the acceptance verdict afterwards\n\n"
         "Stay tuned :)"
     )
 
-    for moder in await Config.getModerators(): # TODO: make moderators.txt store ids
-        await instance.send_document(          #       then make that thing work
-            message.from_user.id,
+    for moder_id in await Config.getModerators(): # TODO: make adding testgen by buttons
+        await instance.send_document(             #       instead of manual
+            moder_id,
             caption=(
-                "One hero want to share his TestGen!\n"
-            f"@{message.from_user.username}\n"
+                "One hero want to share his TestGen\!\n"
+                f"{assignment.to_list_with_id()}\n"
+                f"@{message.from_user.username}\n"
             ),
-            document=message.document.file_id
+            document=message.document.file_id,
+            parse_mode="MarkdownV2"
         )
-        break
 
     data["last_message"] = last_message
     await state.set_data(data)
