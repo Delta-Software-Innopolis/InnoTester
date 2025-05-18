@@ -18,10 +18,35 @@ CHOOSE_ASSIGNMENT_KB = InlineKeyboardMarkup(
         [IKB(text="Choose Assignment", callback_data=CHOOSE_ASSIGNMENT_CB)]
     ]
 )
-
 CHANGE_ASSIGNMENT_KB = InlineKeyboardMarkup(
     inline_keyboard=[
         [IKB(text="Change Assignment", callback_data=CHOOSE_ASSIGNMENT_CB)]
+    ]
+)
+
+
+CHOOSE_ASSIGNMENT_SHARE_CB = "choose_assignment_share"
+CHOOSE_ASSIGNMENT_SHARE_KB = InlineKeyboardMarkup(
+    inline_keyboard=[
+        [IKB(text="Choose Assignment", callback_data=CHOOSE_ASSIGNMENT_SHARE_CB)]
+    ]
+)
+SHARE_REFERENCE_CB = "share_reference"
+SHARE_TESTGEN_CB = "share_testgen"
+SHARE_KB = InlineKeyboardMarkup(
+    inline_keyboard=[
+        [
+            IKB(text="Reference", callback_data=SHARE_REFERENCE_CB),
+            IKB(text="TestGen", callback_data=SHARE_TESTGEN_CB)
+        ],
+        [IKB(text="Change Assignment", callback_data=CHOOSE_ASSIGNMENT_SHARE_CB)]
+    ]
+)
+
+SHARE_CANCEL_CB = "share_cancel"
+SHARE_CANCEL_KB = InlineKeyboardMarkup(
+    inline_keyboard=[
+        [IKB(text="Cancel", callback_data=SHARE_CANCEL_CB)]
     ]
 )
 

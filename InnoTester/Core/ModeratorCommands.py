@@ -1,5 +1,7 @@
 from aiogram import types
+from aiogram.exceptions import TelegramBadRequest
 from aiogram.filters.command import Command
+from aiogram.utils.formatting import Code, Text
 import aiofiles
 import os
 import shutil
@@ -25,7 +27,7 @@ def build_assignments_list(assignments: list) -> str:
 
 @dp.message(Command("removereference", "removeref"))
 async def cmdClearReference(message: types.Message):
-    if message.from_user.username in await Config.getModerators():
+    if message.from_user.id in await Config.getModerators():
 
         if len(message.text.split()) != 2:
             await message.answer(
@@ -67,7 +69,7 @@ async def cmdClearReference(message: types.Message):
 
 @dp.message(Command("removetestgen", "removetg"))
 async def cmdClearTestGen(message: types.Message):
-    if message.from_user.username in await Config.getModerators():
+    if message.from_user.id in await Config.getModerators():
 
         if len(message.text.split()) != 2:
             await message.answer(
@@ -109,7 +111,7 @@ async def cmdClearTestGen(message: types.Message):
 
 @dp.message(Command("uploadreference", "ureference", "uref", "aref"))
 async def uploadReference(message: types.Message):
-    if message.from_user.username in await Config.getModerators():
+    if message.from_user.id in await Config.getModerators():
 
         if (caption := message.caption) == None or len(caption.split()) != 2:
             await message.answer(
@@ -161,7 +163,7 @@ async def uploadReference(message: types.Message):
 
 @dp.message(Command("uploadtestgen", "utestgen", "utg", "atg"))
 async def uploadTestGen(message: types.Message):
-    if message.from_user.username in await Config.getModerators():
+    if message.from_user.id in await Config.getModerators():
         if (caption := message.caption) == None or len(caption.split()) != 2:
             await message.answer(
                 "Usage:\n"
@@ -210,60 +212,96 @@ async def uploadTestGen(message: types.Message):
 
 @dp.message(Command("addmoder", "amoder"))
 async def addModer(message: types.Message):
-    if message.from_user.username in await Config.getModerators():
+    if message.from_user.id in await Config.getModerators():
         args = message.text.split()
 
         if len(args) == 1:
-            await message.answer("Usage: /addmoder <username>")
+            await message.answer("Usage: /addmoder <user_id>")
+
         else:
+            moder_id = args[1]
+            if not moder_id.isnumeric():
+                await message.answer(
+                    "Usage: /addmoder <user_id>\n"
+                    "Provide a numeric user_id please, not a username\n\n"
+                    "You may see id of any user, by toggling:\n"
+                    "Telegam Settings > " 
+                    "Advanced > " 
+                    "Experimental Settings > " 
+                    "Show peer IDs in Profile"
+                )
+                return
+
+            try:
+                moder = await instance.get_chat(moder_id)
+            except TelegramBadRequest as e:
+                await message.answer(
+                    f"I don't know anyone with id {moder_id}\n"
+                    "Make sure the user had texted me before"
+                )
+                return
+
             with open("moderators.txt", "a") as moders:
-                moders.write(f"{args[1]}\n")
-                await message.answer(f"Added new moderator: @{args[1]}")
+                moders.write(f"{moder_id} @{moder.username}\n")
+
+            await message.answer(f"Added new moderator: @{moder.username}")
     else:
         await message.answer("Sorry, but you don't have permission to perform this command")
 
 
 @dp.message(Command("removemoder"))
 async def removeModer(message: types.Message):
-    if message.from_user.username in await Config.getModerators():
+    if message.from_user.id in await Config.getModerators():
         args = message.text.split()
 
-        if len(args) == 1:
-            await message.answer("Usage: /removemoder <username>")
-        else:
-            moders = await Config.getModerators()
 
-            if args[1] == moders[0]:
+        if len(args) == 1:
+            await message.answer("Usage: /removemoder <user_id or username>")
+        else:
+
+            identifier = args[1]
+            if identifier.isnumeric(): identifier = int(identifier)
+
+            moders = await Config.getModerators(get_usernames=True)
+
+            if identifier in moders[0]:
                 await message.answer(f"I am not so stupid lol")
                 return
 
-            if args[1] not in moders:
-                await message.answer(f"This person does not in moderator list")
+            if identifier not in [id_or_name for m in moders for id_or_name in m]:
+                await message.answer(f"This person is not in moderator list")
                 return
 
-            moders.remove(args[1])
+            removed = ("id-here", "username-here")
 
-            async with aiofiles.open("moderators.txt", "w") as mods:
-                n = ""
+            async with aiofiles.open("moderators.txt", "w") as mods: # TODO : make it asyncio Lock'ed
+                data = ""
 
-                for name in moders:
-                    n += name + "\n"
+                for id, username in moders:
+                    if identifier in (id, username):
+                        removed = (id, username)
+                        continue # skipping removed moder
 
-                await mods.write(n)
+                    data += f"{id} @{username}\n"
 
-            await message.answer(f"Removed moderator @{args[1]}")
+                await mods.write(data)
+
+            await message.answer(
+                f"Removed moderator {Code(removed[0]).as_html()} @{removed[1]}",
+                parse_mode="HTML"
+            )
     else:
         await message.answer("Sorry, but you don't have permission to perform this command")
 
 
 @dp.message(Command("moderlist", "mlist"))
 async def moderList(message: types.Message):
-    if message.from_user.username in await Config.getModerators():
+    if message.from_user.id in await Config.getModerators():
         msg = "Moderators:\n"
-        for name in await Config.getModerators():
-            msg += f"- @{name}\n"
+        for id, username in await Config.getModerators(get_usernames=True):
+            msg += f"- {Code(id).as_html()} @{username}\n"
 
-        await message.answer(msg)
+        await message.answer(msg, parse_mode="HTML")
 
     else:
         await message.answer("Sorry, but you don't have permission to perform this command")
@@ -271,13 +309,13 @@ async def moderList(message: types.Message):
 
 @dp.message(Command("moderhelp", "mhelp"))
 async def moderHelp(message: types.Message):
-    if message.from_user.username in await Config.getModerators():
+    if message.from_user.id in await Config.getModerators():
         await message.answer(
             "Moderator commands:\n"
             "/moderhelp - Shows this message\n"
             "/moderlist - Get the list of all moderators\n"
-            "/addmoder <username> - Add a new moderator\n"
-            "/removemoder <username> - Remove a moderator\n"
+            "/addmoder <user_id> - Add a new moderator\n"
+            "/removemoder <user_id or username> - Remove a moderator\n"
             "/probelist - list all currently running probes\n"
             "/removeprobe <username> - kill currently running probe\n"
             "\n"
@@ -297,7 +335,7 @@ async def moderHelp(message: types.Message):
 
 @dp.message(Command("removeprobe", "rprobe"))
 async def removeProbe(message: types.Message):
-    if message.from_user.username in await Config.getModerators():
+    if message.from_user.id in await Config.getModerators():
         args = message.text.split()
 
         if len(args) == 1:
@@ -315,7 +353,7 @@ async def removeProbe(message: types.Message):
 
 @dp.message(Command("probelist", "probes"))
 async def probeList(message: types.Message):
-    if message.from_user.username in await Config.getModerators():
+    if message.from_user.id in await Config.getModerators():
         msg = "Probes:\n"
         for probe in os.listdir("probes"):
             msg += probe + "\n"
@@ -328,7 +366,7 @@ async def probeList(message: types.Message):
 
 @dp.message(Command("assignments", "list"))
 async def listAssignments(message: types.Message):
-    if message.from_user.username in await Config.getModerators():
+    if message.from_user.id in await Config.getModerators():
 
         assignments_list = build_assignments_list(assignmentsManager.cached)
 
@@ -345,7 +383,7 @@ async def listAssignments(message: types.Message):
 
 @dp.message(Command("addassignment", "adda"))
 async def addAssignment(message: types.Message):
-    if message.from_user.username in await Config.getModerators():
+    if message.from_user.id in await Config.getModerators():
         try:
 
             assignment_name = ' '.join(message.text.split()[1:])
@@ -378,7 +416,7 @@ async def addAssignment(message: types.Message):
 
 @dp.message(Command("refresh"))
 async def refreshAssignments(message: types.Message):
-    if message.from_user.username in await Config.getModerators():
+    if message.from_user.id in await Config.getModerators():
 
         old = assignmentsManager.cached.copy()
         await assignmentsManager.updateAssignments()
