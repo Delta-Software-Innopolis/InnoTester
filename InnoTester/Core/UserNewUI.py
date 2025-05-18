@@ -300,7 +300,7 @@ async def onDocument(message: Message, state: FSMContext): # TODO: please, handl
             "Set one in the Telegram settings to proceed"
         ); return
 
-    if os.path.exists("probes/" + message.from_user.username): # TODO : "data/probes"
+    if os.path.exists("data/probes/" + message.from_user.username):
         await last_message.edit_text(
             text=(
                 "Testing started\n"
@@ -341,12 +341,12 @@ async def onDocument(message: Message, state: FSMContext): # TODO: please, handl
         return
 
     await logger.info(f"{message.from_user.username} started testing solution ({probeExtension})")
-    os.mkdir("probes/" + message.from_user.username) # TODO : "data/probes"
-    await instance.download_file(path, f"probes/{message.from_user.username}/probe.{probeExtension}") # TODO : "data/probes"
+    os.mkdir("data/probes/" + message.from_user.username)
+    await instance.download_file(path, f"data/probes/{message.from_user.username}/probe.{probeExtension}")
 
     testCount = 100
 
-    async with aiofiles.open(f"probes/{message.from_user.username}/iterations.txt", "w") as iters: # TODO : "data/probes"
+    async with aiofiles.open(f"data/probes/{message.from_user.username}/iterations.txt", "w") as iters:
         if message.caption is not None:
             try:
                 await iters.write(f"{int(message.caption)}")
@@ -356,10 +356,10 @@ async def onDocument(message: Message, state: FSMContext): # TODO: please, handl
         else:
             await iters.write("100")
 
-    async with aiofiles.open(f"probes/{message.from_user.username}/protocol.txt", "w") as proto: # TODO : "data/probes"
+    async with aiofiles.open(f"data/probes/{message.from_user.username}/protocol.txt", "w") as proto:
         await proto.write("")
 
-    async with aiofiles.open(f"probes/{message.from_user.username}/comparison_page.html", "w") as proto: # TODO : "data/probes"
+    async with aiofiles.open(f"data/probes/{message.from_user.username}/comparison_page.html", "w") as proto:
         await proto.write("")
 
     last_message = await message.answer(
@@ -385,13 +385,13 @@ async def onDocument(message: Message, state: FSMContext): # TODO: please, handl
             "AutoRemove": True,
             "Memory": 256 * 1024 * 1024,  # 256MB
             "Binds": [
-                f"{pwd}/compile.yaml:/testEnv/compile.yaml",
-                f"{pwd}/probes/{username}/probe.{probeExtension}:/testEnv/probe.{probeExtension}", # TODO : "data/probes"
+                f"{pwd}/compile.yaml:/testEnv/compile.yaml", # TODO : BUG : resources/compile.yaml
+                f"{pwd}/data/probes/{username}/probe.{probeExtension}:/testEnv/probe.{probeExtension}",
                 f"{pwd}/data/references/{data['assignment'].reference_id}.{referenceExtension}:/testEnv/reference.{referenceExtension}",
                 f"{pwd}/data/testgens/{data['assignment'].testgen_id}.{testgenExtension}:/testEnv/testgen.{testgenExtension}",
-                f"{pwd}/probes/{username}/protocol.txt:/testEnv/protocol.txt", # TODO : "data/probes"
-                f"{pwd}/probes/{username}/comparison_page.html:/testEnv/comparison_page.html", # TODO : "data/probes"
-                f"{pwd}/probes/{username}/iterations.txt:/testEnv/iterations.txt", # TODO : "data/probes"
+                f"{pwd}/data/probes/{username}/protocol.txt:/testEnv/protocol.txt",
+                f"{pwd}/data/probes/{username}/comparison_page.html:/testEnv/comparison_page.html",
+                f"{pwd}/data/probes/{username}/iterations.txt:/testEnv/iterations.txt",
             ],
         },
         "WorkingDir": "/testEnv",
@@ -418,7 +418,7 @@ async def onDocument(message: Message, state: FSMContext): # TODO: please, handl
                 ),
                 reply_markup=CHANGE_ASSIGNMENT_KB
             )
-            shutil.rmtree(f"probes/{message.from_user.username}", ignore_errors=True) # TODO : "data/probes"
+            shutil.rmtree(f"data/probes/{message.from_user.username}", ignore_errors=True)
             del data["testing_killed"]
 
             await state.set_data(data)
@@ -435,20 +435,20 @@ async def onDocument(message: Message, state: FSMContext): # TODO: please, handl
                 reply_markup=CHANGE_ASSIGNMENT_KB
             )
         else:
-            async with aiofiles.open(f"probes/{message.from_user.username}/protocol.txt") as proto: # TODO : "data/probes"
+            async with aiofiles.open(f"data/probes/{message.from_user.username}/protocol.txt") as proto:
                 ans = await proto.readlines()
                 await logger.info(f"Finished testing {message.from_user.username}'s solution: {''.join(ans)}")
                 try:
                     await last_message.edit_text(**Config.errorHandler(ans, testCount).as_kwargs(), reply_markup=CHANGE_ASSIGNMENT_KB)
                 except TelegramBadRequest as e:
-                    protocol = FSInputFile(f"probes/{message.from_user.username}/protocol.txt") # TODO : "data/probes"
+                    protocol = FSInputFile(f"data/probes/{message.from_user.username}/protocol.txt")
                     await message.answer_document(protocol)
 
-            async with aiofiles.open(f"probes/{message.from_user.username}/comparison_page.html") as comparison: # TODO : "data/probes"
+            async with aiofiles.open(f"data/probes/{message.from_user.username}/comparison_page.html") as comparison:
                 comp = await comparison.readlines()
 
                 if len(comp) != 0:
-                    compPage = FSInputFile(f"probes/{message.from_user.username}/comparison_page.html") # TODO : "data/probes"
+                    compPage = FSInputFile(f"data/probes/{message.from_user.username}/comparison_page.html")
                     await message.answer_document(compPage)
 
 
@@ -469,7 +469,7 @@ async def onDocument(message: Message, state: FSMContext): # TODO: please, handl
             reply_markup=CHANGE_ASSIGNMENT_KB
         )
 
-    shutil.rmtree(f"probes/{message.from_user.username}", ignore_errors=True) # TODO : "data/probes"
+    shutil.rmtree(f"data/probes/{message.from_user.username}", ignore_errors=True)
     await dockerClient.close()
 
 

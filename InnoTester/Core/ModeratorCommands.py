@@ -343,8 +343,8 @@ async def removeProbe(message: types.Message):
         if len(args) == 1:
             await message.answer("Usage: /removeprobe <username>")
         else:
-            if os.path.exists(f"probes/{args[1]}"): # TODO : "data/probes"
-                shutil.rmtree(f"probes/{args[1]}")  # TODO : "data/probes"
+            if os.path.exists(f"data/probes/{args[1]}"):
+                shutil.rmtree(f"data/probes/{args[1]}")
                 await message.answer("Probe was removed successfully")
             else:
                 await message.answer("Such probe does not exists")
@@ -357,7 +357,7 @@ async def removeProbe(message: types.Message):
 async def probeList(message: types.Message):
     if message.from_user.id in await Config.getModerators():
         msg = "Probes:\n"
-        for probe in os.listdir("probes"): # TODO : "data/probes"
+        for probe in os.listdir("data/probes"):
             msg += probe + "\n"
 
         await message.answer(msg)
