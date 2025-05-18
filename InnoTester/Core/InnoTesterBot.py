@@ -2,7 +2,7 @@ from aiogram import Bot, Dispatcher
 from InnoTester.Utils.Logger import Logger
 import InnoTester.Utils.Config as Config
 
-from InnoTester.Core.Assignments import AssignmentsManager, CodeManager
+from InnoTester.Core.Logic import AssignmentsManager, CodeManager
 
 
 class InnoTesterBot(Bot):

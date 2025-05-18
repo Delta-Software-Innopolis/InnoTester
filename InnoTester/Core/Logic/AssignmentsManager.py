@@ -3,9 +3,9 @@ import aiofiles
 import json
 import asyncio
 
-from InnoTester.Core.Assignments.Models import *
-from InnoTester.Core.Assignments.Exceptions import *
-from InnoTester.Core.Assignments import RIDGenerator
+from InnoTester.Core.Logic.Models import *
+from InnoTester.Core.Logic.Exceptions import *
+from InnoTester.Core.Logic import RIDGenerator
 from InnoTester.Utils import AsyncFileManager
 
 

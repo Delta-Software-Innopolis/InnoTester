@@ -1,1 +1,1 @@
-from InnoTester.Core.Assignments.Exceptions import *
+from InnoTester.Core.Logic.Exceptions import *

@@ -4,7 +4,7 @@ from aiogram.types import (
     InlineKeyboardMarkup
 )
 
-from InnoTester.Core.Assignments.Models import Assignment
+from InnoTester.Core.Logic.Models import Assignment
 
 
 IKB = InlineKeyboardButton
