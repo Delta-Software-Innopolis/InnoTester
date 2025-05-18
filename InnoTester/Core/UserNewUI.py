@@ -385,7 +385,7 @@ async def onDocument(message: Message, state: FSMContext): # TODO: please, handl
             "AutoRemove": True,
             "Memory": 256 * 1024 * 1024,  # 256MB
             "Binds": [
-                f"{pwd}/compile.yaml:/testEnv/compile.yaml", # TODO : BUG : resources/compile.yaml
+                f"{pwd}/resources/compile.yaml:/testEnv/compile.yaml",
                 f"{pwd}/data/probes/{username}/probe.{probeExtension}:/testEnv/probe.{probeExtension}",
                 f"{pwd}/data/references/{data['assignment'].reference_id}.{referenceExtension}:/testEnv/reference.{referenceExtension}",
                 f"{pwd}/data/testgens/{data['assignment'].testgen_id}.{testgenExtension}:/testEnv/testgen.{testgenExtension}",
