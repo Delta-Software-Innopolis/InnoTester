@@ -6,6 +6,7 @@ import asyncio
 from InnoTester.Core.Assignments.Models import *
 from InnoTester.Core.Assignments.Exceptions import *
 from InnoTester.Core.Assignments import RIDGenerator
+from InnoTester.Utils import AsyncFileManager
 
 
 if not os.path.exists("data"): os.mkdir("data")
@@ -17,7 +18,7 @@ ASSIGNMENTS_FILE = "data/assignments.json"
 class AssignmentsManager:
     def __init__(self):
         self.cached = self.__readAssignmentsSync()
-        self.__ioLock = asyncio.Lock()
+        self.__file = AsyncFileManager(ASSIGNMENTS_FILE)
 
     
     async def addAssignment(self, name: str) -> Assignment:
@@ -71,11 +72,8 @@ class AssignmentsManager:
 
     async def __readAssignments(self) -> list[Assignment]:
         data = None
-        async with self.__ioLock:
-            async with aiofiles.open(
-                ASSIGNMENTS_FILE, 'r', encoding="utf-8"
-            ) as file:
-                data = json.loads(await file.read())
+        async with self.__file.open('r') as file:
+            data = json.loads(await file.read())
         if data:
             return [Assignment.from_dict(d) for d in data]
         else:
@@ -84,12 +82,9 @@ class AssignmentsManager:
 
     async def __writeAssignments(self, assignments: list[Assignment]):
         data = [a.to_dict() for a in assignments]
-        async with self.__ioLock:
-            async with aiofiles.open(
-                ASSIGNMENTS_FILE, 'w', encoding="utf-8"
-            ) as file:
-                await file.write(json.dumps(
-                    data,
-                    ensure_ascii=False,
-                    indent=2
-                ))
+        async with self.__file.open('w') as file:
+            await file.write(json.dumps(
+                data,
+                ensure_ascii=False,
+                indent=2
+            ))
