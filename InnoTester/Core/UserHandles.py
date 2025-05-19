@@ -2,6 +2,7 @@ import asyncio
 import aiofiles
 import os
 import shutil
+import logging
 from aiogram import F
 from aiogram.filters import Command, CommandStart, StateFilter
 from aiogram.types import Message, CallbackQuery
@@ -120,7 +121,7 @@ async def onShareReferenceDocument(message: Message, state: FSMContext):
         "Stay tuned :)"
     )
 
-    for moder_id in await Config.getModerators(): # TODO: make adding reference by buttons
+    for moder_id in await modersManager.get():    # TODO: make adding reference by buttons
         await instance.send_document(             #       instead of manual
             moder_id,
             caption=(
@@ -160,7 +161,7 @@ async def onShareTestGenDocument(message: Message, state: FSMContext):
         "Stay tuned :)"
     )
 
-    for moder_id in await Config.getModerators(): # TODO: make adding testgen by buttons
+    for moder_id in await modersManager.get(): # TODO: make adding testgen by buttons
         await instance.send_document(             #       instead of manual
             moder_id,
             caption=(
@@ -298,7 +299,9 @@ async def onDocument(message: Message, state: FSMContext): # TODO: please, handl
         await message.answer(
             "To use the bot you need to have a @username\n"
             "Set one in the Telegram settings to proceed"
-        ); return
+        )
+        await dockerClient.close()
+        return
 
     if os.path.exists("data/probes/" + message.from_user.username):
         await last_message.edit_text(
@@ -309,7 +312,7 @@ async def onDocument(message: Message, state: FSMContext): # TODO: please, handl
             ),
             reply_markup=stopTestKeyboard(message.from_user.username)
         )
-
+        await dockerClient.close()
         return
 
     if last_message: # That's important, to delete the message before document sent
@@ -323,6 +326,7 @@ async def onDocument(message: Message, state: FSMContext): # TODO: please, handl
         )
         data["last_message"] = last_message
         await state.set_data(data)
+        await dockerClient.close()
         return
 
     path = (await instance.get_file(message.document.file_id)).file_path
@@ -338,9 +342,10 @@ async def onDocument(message: Message, state: FSMContext): # TODO: please, handl
                 supportedExtensions += f".{ext}, "
 
         await message.answer(f"Only {supportedExtensions} files are accepted")
+        await dockerClient.close()
         return
 
-    await logger.info(f"{message.from_user.username} started testing solution ({probeExtension})")
+    logging.info(f"{message.from_user.username} started testing solution ({probeExtension})")
     os.mkdir("data/probes/" + message.from_user.username)
     await instance.download_file(path, f"data/probes/{message.from_user.username}/probe.{probeExtension}")
 
@@ -423,7 +428,6 @@ async def onDocument(message: Message, state: FSMContext): # TODO: please, handl
 
             await state.set_data(data)
             await dockerClient.close()
-
             return
 
         if result['StatusCode'] != 0:
@@ -437,7 +441,7 @@ async def onDocument(message: Message, state: FSMContext): # TODO: please, handl
         else:
             async with aiofiles.open(f"data/probes/{message.from_user.username}/protocol.txt") as proto:
                 ans = await proto.readlines()
-                await logger.info(f"Finished testing {message.from_user.username}'s solution: {''.join(ans)}")
+                logging.info(f"Finished testing {message.from_user.username}'s solution: {''.join(ans)}")
                 try:
                     await last_message.edit_text(**Config.errorHandler(ans, testCount).as_kwargs(), reply_markup=CHANGE_ASSIGNMENT_KB)
                 except TelegramBadRequest as e:

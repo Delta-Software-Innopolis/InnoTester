@@ -2,10 +2,10 @@ from aiogram import types
 from aiogram.exceptions import TelegramBadRequest
 from aiogram.filters.command import Command
 from aiogram.utils.formatting import Code
-import aiofiles
 import os
 import shutil
 from io import BytesIO
+import logging
 
 
 from InnoTester.Core.InnoTesterBot import (
@@ -442,3 +442,8 @@ async def refreshAssignments(message: types.Message):
 
     else:
         await message.answer("Sorry, but you don't have permission to perform this command")
+
+
+@dp.message(Command("critical", "boom"))
+async def onCritical(message: types.Message):
+    logging.critical("Something real bad happened")

@@ -77,6 +77,17 @@ with open("resources/banlist.yaml") as f:
         banlist.remove("user-id")
 
 
+def getLanguage(filename, dir = "."):
+    for file in os.listdir(dir):
+        name = file.split(".")[0]
+        extension = file.split(".")[-1]
+
+        if filename == name:
+            return extension
+
+    return "undefined"
+
+
 def errorHandler(protocol, testCount: int):
     match (protocol[0].strip("\n")):
         case "ok":
