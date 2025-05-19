@@ -9,9 +9,8 @@ from io import BytesIO
 
 
 from InnoTester.Core.InnoTesterBot import (
-    dp, instance, assignmentsManager, codeManager
+    dp, instance, assignmentsManager, codeManager, modersManager
 )
-import InnoTester.Utils.Config as Config
 from InnoTester.Utils.Exceptions import *
 
 
@@ -29,7 +28,7 @@ def build_assignments_list(assignments: list) -> str:
 
 @dp.message(Command("removereference", "removeref"))
 async def cmdClearReference(message: types.Message):
-    if message.from_user.id in await Config.getModerators():
+    if await modersManager.hasModerWithId(message.from_user.id):
 
         if len(message.text.split()) != 2:
             await message.answer(
@@ -71,7 +70,7 @@ async def cmdClearReference(message: types.Message):
 
 @dp.message(Command("removetestgen", "removetg"))
 async def cmdClearTestGen(message: types.Message):
-    if message.from_user.id in await Config.getModerators():
+    if await modersManager.hasModerWithId(message.from_user.id):
 
         if len(message.text.split()) != 2:
             await message.answer(
@@ -113,7 +112,7 @@ async def cmdClearTestGen(message: types.Message):
 
 @dp.message(Command("uploadreference", "ureference", "uref", "aref"))
 async def uploadReference(message: types.Message):
-    if message.from_user.id in await Config.getModerators():
+    if await modersManager.hasModerWithId(message.from_user.id):
 
         if (caption := message.caption) == None or len(caption.split()) != 2:
             await message.answer(
@@ -165,7 +164,7 @@ async def uploadReference(message: types.Message):
 
 @dp.message(Command("uploadtestgen", "utestgen", "utg", "atg"))
 async def uploadTestGen(message: types.Message):
-    if message.from_user.id in await Config.getModerators():
+    if await modersManager.hasModerWithId(message.from_user.id):
         if (caption := message.caption) == None or len(caption.split()) != 2:
             await message.answer(
                 "Usage:\n"
@@ -214,7 +213,7 @@ async def uploadTestGen(message: types.Message):
 
 @dp.message(Command("addmoder", "amoder"))
 async def addModer(message: types.Message):
-    if message.from_user.id in await Config.getModerators():
+    if await modersManager.hasModerWithId(message.from_user.id):
         args = message.text.split()
 
         if len(args) == 1:
@@ -243,8 +242,9 @@ async def addModer(message: types.Message):
                 )
                 return
 
-            with open("moderators.txt", "a") as moders:
-                moders.write(f"{moder_id} @{moder.username}\n")
+            moders = await modersManager.get(get_usernames=True)
+            moders.append((moder.id, moder.username))
+            await modersManager.set(moders)
 
             await message.answer(f"Added new moderator: @{moder.username}")
     else:
@@ -253,7 +253,7 @@ async def addModer(message: types.Message):
 
 @dp.message(Command("removemoder"))
 async def removeModer(message: types.Message):
-    if message.from_user.id in await Config.getModerators():
+    if await modersManager.hasModerWithId(message.from_user.id):
         args = message.text.split()
 
 
@@ -264,7 +264,7 @@ async def removeModer(message: types.Message):
             identifier = args[1]
             if identifier.isnumeric(): identifier = int(identifier)
 
-            moders = await Config.getModerators(get_usernames=True)
+            moders = await modersManager.get(get_usernames=True)
 
             if identifier in moders[0]:
                 await message.answer(f"I am not so stupid lol")
@@ -276,17 +276,11 @@ async def removeModer(message: types.Message):
 
             removed = ("id-here", "username-here")
 
-            async with aiofiles.open("data/moderators.txt", "w") as mods: # TODO : make it asyncio Lock'ed
-                data = ""                                                 # TODO : move the logic out of handler
-
-                for id, username in moders:
-                    if identifier in (id, username):
-                        removed = (id, username)
-                        continue # skipping removed moder
-
-                    data += f"{id} @{username}\n"
-
-                await mods.write(data)
+            for i in range(len(moders)):
+                if identifier in moders[i]:
+                    removed = moders[i]
+                    del moders[i]
+            await modersManager.set(moders)
 
             await message.answer(
                 f"Removed moderator {Code(removed[0]).as_html()} @{removed[1]}",
@@ -298,9 +292,9 @@ async def removeModer(message: types.Message):
 
 @dp.message(Command("moderlist", "mlist"))
 async def moderList(message: types.Message):
-    if message.from_user.id in await Config.getModerators():
+    if await modersManager.hasModerWithId(message.from_user.id):
         msg = "Moderators:\n"
-        for id, username in await Config.getModerators(get_usernames=True):
+        for id, username in await modersManager.get(get_usernames=True):
             msg += f"- {Code(id).as_html()} @{username}\n"
 
         await message.answer(msg, parse_mode="HTML")
@@ -311,7 +305,7 @@ async def moderList(message: types.Message):
 
 @dp.message(Command("moderhelp", "mhelp"))
 async def moderHelp(message: types.Message):
-    if message.from_user.id in await Config.getModerators():
+    if await modersManager.hasModerWithId(message.from_user.id):
         await message.answer(
             "Moderator commands:\n"
             "/moderhelp - Shows this message\n"
@@ -337,7 +331,7 @@ async def moderHelp(message: types.Message):
 
 @dp.message(Command("removeprobe", "rprobe"))
 async def removeProbe(message: types.Message):
-    if message.from_user.id in await Config.getModerators():
+    if await modersManager.hasModerWithId(message.from_user.id):
         args = message.text.split()
 
         if len(args) == 1:
@@ -355,7 +349,7 @@ async def removeProbe(message: types.Message):
 
 @dp.message(Command("probelist", "probes"))
 async def probeList(message: types.Message):
-    if message.from_user.id in await Config.getModerators():
+    if await modersManager.hasModerWithId(message.from_user.id):
         msg = "Probes:\n"
         for probe in os.listdir("data/probes"):
             msg += probe + "\n"
@@ -368,7 +362,7 @@ async def probeList(message: types.Message):
 
 @dp.message(Command("assignments", "list"))
 async def listAssignments(message: types.Message):
-    if message.from_user.id in await Config.getModerators():
+    if await modersManager.hasModerWithId(message.from_user.id):
 
         assignments_list = build_assignments_list(assignmentsManager.cached)
 
@@ -385,7 +379,7 @@ async def listAssignments(message: types.Message):
 
 @dp.message(Command("addassignment", "adda"))
 async def addAssignment(message: types.Message):
-    if message.from_user.id in await Config.getModerators():
+    if await modersManager.hasModerWithId(message.from_user.id):
         try:
 
             assignment_name = ' '.join(message.text.split()[1:])
@@ -418,7 +412,7 @@ async def addAssignment(message: types.Message):
 
 @dp.message(Command("refresh"))
 async def refreshAssignments(message: types.Message):
-    if message.from_user.id in await Config.getModerators():
+    if await modersManager.hasModerWithId(message.from_user.id):
 
         old = assignmentsManager.cached.copy()
         await assignmentsManager.updateAssignments()

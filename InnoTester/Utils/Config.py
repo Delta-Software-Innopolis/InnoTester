@@ -77,21 +77,6 @@ with open("resources/banlist.yaml") as f:
         banlist.remove("user-id")
 
 
-@overload
-async def getModerators() -> list[int]: ...
-@overload
-async def getModerators(get_usernames: bool = True) -> list[tuple[int, str]]: ...
-
-async def getModerators(get_usernames: bool = False) -> list[int] | list[tuple[int, str]]:
-    """ Returns the list of user_ids or usernames from moderators.txt"""
-
-    async with aiofiles.open("resources/moderators.txt", 'r') as f: # TODO: add asyncio Locking
-        moders = list(map(lambda x: x.strip("\n").split(' @'), await f.readlines()))
-        moders = [(int(id), username) for id, username in moders]
-        if not get_usernames: moders = [m[0] for m in moders]
-        return moders
-
-
 def errorHandler(protocol, testCount: int):
     match (protocol[0].strip("\n")):
         case "ok":

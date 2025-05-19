@@ -2,7 +2,10 @@ from aiogram import Bot, Dispatcher
 from InnoTester.Utils.Logger import Logger
 import InnoTester.Utils.Config as Config
 
-from InnoTester.Core.Logic import AssignmentsManager, CodeManager
+from InnoTester.Core.Logic import (
+    AssignmentsManager, CodeManager,
+    ModersManager
+)
 
 
 class InnoTesterBot(Bot):
@@ -16,3 +19,4 @@ logger = Logger("data/log.txt")
 
 assignmentsManager = AssignmentsManager()
 codeManager = CodeManager()
+modersManager = ModersManager()
