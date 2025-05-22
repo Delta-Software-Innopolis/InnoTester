@@ -13,6 +13,10 @@ from aiogram.types import FSInputFile
 
 from InnoTester.Core.InnoTesterBot import *
 from InnoTester.Utils.Keyboards import *
+from InnoTester.Utils.Logging import (
+    logInfo, logError, logCritical,
+    logMissuse, logNotPermitted
+)
 
 import aiodocker
 import aiodocker.exceptions
@@ -40,6 +44,7 @@ async def onCmdStart(message: Message, state: FSMContext):
 
     data["last_message"] = last_message
     await state.set_data(data)
+    logInfo(message, "Issued /start")
 
 
 @dp.message(Command("share"))
@@ -60,6 +65,7 @@ async def onCmdShare(message: Message, state: FSMContext):
             ),
             reply_markup=SHARE_KB
         )
+        logInfo(message, f"Issued /share ({assignment})")
     else:
         last_message = await message.answer(
             text=(
@@ -68,6 +74,7 @@ async def onCmdShare(message: Message, state: FSMContext):
             ),
             reply_markup=CHOOSE_ASSIGNMENT_SHARE_KB
         )
+        logInfo(message, "Issued /share (no assignment)")
 
     data["last_message"] = last_message
     await state.set_data(data)
@@ -84,6 +91,7 @@ async def onShareTestGenButton(query: CallbackQuery, state: FSMContext):
         "Now please, send the send the TestGen code as a file",
         reply_markup=SHARE_CANCEL_KB
     )
+    logInfo(query, "Clicked SHARE_TESTGEN")
 
 
 @dp.callback_query(F.data == SHARE_REFERENCE_CB)
@@ -97,6 +105,7 @@ async def onShareReferenceButton(query: CallbackQuery, state: FSMContext):
         "Now please, send the send the Reference code as a file",
         reply_markup=SHARE_CANCEL_KB
     )
+    logInfo(query, "Clicked SHARE_REFERENCE")
 
 
 @dp.message(StateFilter(ShareStates.SEND_REFERENCE), F.document)
@@ -109,6 +118,7 @@ async def onShareReferenceDocument(message: Message, state: FSMContext):
     assignment: Assignment = data.get("assignment")
 
     if not assignment:
+        logInfo(message, "Failed to send reference (no assignment)")
         await onCmdShare(message, state)
 
     # TODO : add verificitaion of username != None
@@ -120,7 +130,13 @@ async def onShareReferenceDocument(message: Message, state: FSMContext):
         "you the acceptance verdict afterwards\n\n"
         "Stay tuned :)"
     )
+    data["last_message"] = last_message
+    await state.set_data(data)
+    await state.set_state(None)
 
+    logInfo(message, f"Succesfully sent reference ({assignment})")
+
+    moder_count = 0
     for moder_id in await modersManager.get():    # TODO: make adding reference by buttons
         await instance.send_document(             #       instead of manual
             moder_id,
@@ -132,11 +148,9 @@ async def onShareReferenceDocument(message: Message, state: FSMContext):
             document=message.document.file_id,
             parse_mode="MarkdownV2"
         )
+        moder_count += 1
 
-    data["last_message"] = last_message
-    await state.set_data(data)
-
-    await state.set_state(None)
+    logInfo(message, f"{moder_count} moders received sent reference")
 
 
 @dp.message(StateFilter(ShareStates.SEND_TESTGEN), F.document)
@@ -146,6 +160,7 @@ async def onShareTestGenDocument(message: Message, state: FSMContext):
     assignment : Assignment = data.get("assignment")
 
     if not assignment:
+        logInfo(message, "Failed to send testgen (no assignment)")
         await onCmdShare(message, state)
 
     last_message: Message = data["last_message"]
@@ -160,7 +175,13 @@ async def onShareTestGenDocument(message: Message, state: FSMContext):
         "you the acceptance verdict afterwards\n\n"
         "Stay tuned :)"
     )
+    logInfo(message, f"Succesfully sent testgen ({assignment})")
 
+    data["last_message"] = last_message
+    await state.set_data(data)
+    await state.set_state(None)
+
+    moder_count = 0
     for moder_id in await modersManager.get(): # TODO: make adding testgen by buttons
         await instance.send_document(             #       instead of manual
             moder_id,
@@ -172,11 +193,9 @@ async def onShareTestGenDocument(message: Message, state: FSMContext):
             document=message.document.file_id,
             parse_mode="MarkdownV2"
         )
+        moder_count += 1
 
-    data["last_message"] = last_message
-    await state.set_data(data)
-
-    await state.set_state(None)
+    logInfo(message, f"{moder_count} moders received sent testgen")
 
 
 @dp.callback_query(F.data == SHARE_CANCEL_CB)
@@ -196,6 +215,7 @@ async def onCancelShare(query: CallbackQuery, state: FSMContext):
             ),
             reply_markup=SHARE_KB
         )
+        logInfo(query, f"Canceled /share ({assignment})")
     else:
         await query.message.edit_text(
             text=(
@@ -204,6 +224,7 @@ async def onCancelShare(query: CallbackQuery, state: FSMContext):
             ),
             reply_markup=CHOOSE_ASSIGNMENT_SHARE_KB
         )
+        logInfo(query, f"Canceled /share (assignment NOT chosen)")
 
 
 @dp.callback_query(F.data == CHOOSE_ASSIGNMENT_CB)
@@ -221,6 +242,7 @@ async def onOpenAssignmentsList(query: CallbackQuery, state: FSMContext):
         text="Here are all the assignments:",
         reply_markup=assigListKeyboard(assignments, chosenAssignment)
     )
+    logInfo(query, "Opened users' assignments list")
 
 
 @dp.callback_query(F.data == CHOOSE_ASSIGNMENT_SHARE_CB)
@@ -250,6 +272,7 @@ async def onChooseAssignmentForShare(query: CallbackQuery, state: FSMContext):
         reply_markup=SHARE_KB
     )
     await state.set_state(None)
+    logInfo(query, f"Chosen assignment for /share ({assignment})")
 
 
 @dp.callback_query(F.data.startswith(ASSIGNMENT_CB_PREFIX))
@@ -271,7 +294,9 @@ async def onChooseAssignment(query: CallbackQuery, state: FSMContext):
             "If YOU want to share your solution or "
             "test generator - type /share, be a hero 😎",
             show_alert=True
-        ); return
+        )
+        logInfo(query, f"Tried to choose NOTCONFIGURED assignment ({assignment})")
+        return
 
     data["assignment"] = assignment
     await state.set_data(data)
@@ -284,6 +309,7 @@ async def onChooseAssignment(query: CallbackQuery, state: FSMContext):
         ),
         reply_markup=CHANGE_ASSIGNMENT_KB
     )
+    logInfo(query, f"Chosen assignment ({assignment})")
 
 
 @dp.message(F.document)
@@ -294,13 +320,13 @@ async def onDocument(message: Message, state: FSMContext): # TODO: please, handl
     assignment = data.get("assignment")
     last_message: Message = data.get("last_message")
 
-
     if not message.from_user.username:
         await message.answer(
             "To use the bot you need to have a @username\n"
             "Set one in the Telegram settings to proceed"
         )
         await dockerClient.close()
+        logInfo(message, "Failed to start testing (no username)")
         return
 
     if os.path.exists("data/probes/" + message.from_user.username):
@@ -313,6 +339,7 @@ async def onDocument(message: Message, state: FSMContext): # TODO: please, handl
             reply_markup=stopTestKeyboard(message.from_user.username)
         )
         await dockerClient.close()
+        logInfo(message, "Failed to start testing (already testing)")
         return
 
     if last_message: # That's important, to delete the message before document sent
@@ -327,6 +354,7 @@ async def onDocument(message: Message, state: FSMContext): # TODO: please, handl
         data["last_message"] = last_message
         await state.set_data(data)
         await dockerClient.close()
+        logInfo(message, "Failed to start testing (no assignment)")
         return
 
     path = (await instance.get_file(message.document.file_id)).file_path
@@ -343,9 +371,9 @@ async def onDocument(message: Message, state: FSMContext): # TODO: please, handl
 
         await message.answer(f"Only {supportedExtensions} files are accepted")
         await dockerClient.close()
+        logInfo(message, "Failed to start testing (inacceptable ext)")
         return
 
-    logging.info(f"{message.from_user.username} started testing solution ({probeExtension})")
     os.mkdir("data/probes/" + message.from_user.username)
     await instance.download_file(path, f"data/probes/{message.from_user.username}/probe.{probeExtension}")
 
@@ -374,6 +402,7 @@ async def onDocument(message: Message, state: FSMContext): # TODO: please, handl
         ),
         reply_markup=stopTestKeyboard(message.from_user.username)
     )
+    logInfo(message, f"Started testing ({assignment}) ({probeExtension})")
 
     data["last_message"] = last_message
     await state.set_data(data)
@@ -382,7 +411,6 @@ async def onDocument(message: Message, state: FSMContext): # TODO: please, handl
     referenceExtension = Config.getLanguage(data['assignment'].reference_id, f"{pwd}/data/references")
     testgenExtension = Config.getLanguage(data['assignment'].testgen_id, f"{pwd}/data/testgens")
     username = message.from_user.username
-
 
     containerConfig = {
         "Image": Config.dockerImageNum,
@@ -438,15 +466,16 @@ async def onDocument(message: Message, state: FSMContext): # TODO: please, handl
                 ),
                 reply_markup=CHANGE_ASSIGNMENT_KB
             )
+            logInfo(message, f"Error while testing: {''.join(containerLog)}")
         else:
             async with aiofiles.open(f"data/probes/{message.from_user.username}/protocol.txt") as proto:
                 ans = await proto.readlines()
-                logging.info(f"Finished testing {message.from_user.username}'s solution: {''.join(ans)}")
                 try:
                     await last_message.edit_text(**Config.errorHandler(ans, testCount).as_kwargs(), reply_markup=CHANGE_ASSIGNMENT_KB)
                 except TelegramBadRequest as e:
                     protocol = FSInputFile(f"data/probes/{message.from_user.username}/protocol.txt")
                     await message.answer_document(protocol)
+                logInfo(message, f"Finished testing: {''.join(ans)}")
 
             async with aiofiles.open(f"data/probes/{message.from_user.username}/comparison_page.html") as comparison:
                 comp = await comparison.readlines()
@@ -464,6 +493,7 @@ async def onDocument(message: Message, state: FSMContext): # TODO: please, handl
             ),
             reply_markup=CHANGE_ASSIGNMENT_KB
         )
+        logError(message, f"Error running container: {e}")
     except aiodocker.exceptions.DockerError as e:
         await last_message.edit_text(
             text=(
@@ -472,10 +502,10 @@ async def onDocument(message: Message, state: FSMContext): # TODO: please, handl
             ),
             reply_markup=CHANGE_ASSIGNMENT_KB
         )
+        logError(message, f"Error running container: {e}")
 
     shutil.rmtree(f"data/probes/{message.from_user.username}", ignore_errors=True)
     await dockerClient.close()
-
 
 
 @dp.callback_query(F.data.startswith(STOP_CB_PREFIX))
@@ -488,15 +518,16 @@ async def onStopTesting(query: CallbackQuery, state: FSMContext):
         await query.message.edit_text(
             text="You need first to choose the assignment",
             reply_markup=CHOOSE_ASSIGNMENT_KB
-        ); return
+        )
+        logInfo(query, "Failed to stop testing (no assignment)")
+        return
 
     if "container" not in data.keys():
         await query.message.edit_text(
-            text=(
-                "Testing process was not ran. Nothing to stop.\n"
-            ),
-            reply_markup=CHANGE_ASSIGNMENT_KB)
-
+            text="Testing process was not ran. Nothing to stop.",
+            reply_markup=CHANGE_ASSIGNMENT_KB
+        )
+        logInfo(query, "Failed to stop testing (nothing to stop)")
         return
 
     cont = data["container"]
@@ -515,3 +546,4 @@ async def onStopTesting(query: CallbackQuery, state: FSMContext):
         ),
         reply_markup=CHANGE_ASSIGNMENT_KB
     )
+    logInfo(query, "Stopped testing forcefully")

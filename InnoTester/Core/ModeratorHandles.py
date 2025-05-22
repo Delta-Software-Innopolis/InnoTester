@@ -12,7 +12,6 @@ from InnoTester.Core.InnoTesterBot import (
 )
 from InnoTester.Utils.Exceptions import *
 from InnoTester.Utils.Logging import (
-    log, 
     logInfo, logError, logCritical,
     logMissuse, logNotPermitted
 )
