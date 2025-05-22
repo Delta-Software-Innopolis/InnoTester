@@ -5,13 +5,17 @@ from aiogram.utils.formatting import Code
 import os
 import shutil
 from io import BytesIO
-import logging
 
 
 from InnoTester.Core.InnoTesterBot import (
     dp, instance, assignmentsManager, codeManager, modersManager
 )
 from InnoTester.Utils.Exceptions import *
+from InnoTester.Utils.Logging import (
+    log, 
+    logInfo, logError, logCritical,
+    logMissuse, logNotPermitted
+)
 
 
 # utils
@@ -36,7 +40,9 @@ async def cmdClearReference(message: types.Message):
                 "`/removereference <assignment_id>`\n"
                 "Use /list to see all the assignments",
                 parse_mode="MarkdownV2"
-            ); return
+            )
+            logMissuse(message, "removereference")
+            return
 
         id = message.text.split()[1]
 
@@ -54,18 +60,25 @@ async def cmdClearReference(message: types.Message):
                 f"Reference \(`{id}`\) removed successfuly",
                 parse_mode="MarkdownV2"
             )
+            logInfo(message, f"Reference {id} removed {assignment}")
+
         except CodeRecordNotFound:
             await message.answer("Reference not found :(")
+            logInfo(message, "Reference not found (/removereference))")
+
         except AssignmentNotFound:
             await message.answer("Corresponding assignment not found :(")
+            logInfo(message, "Assignment not found (/removereference)")
 
         except Exception as e:
             await message.answer(
                 "Something went wrong:\n"
                 f"{str(e)}"
             )
+            logError(message,"While using /removereference\n\n"+str(e))
     else:
         await message.answer("Sorry, but you don't have permission to perform this command")
+        logNotPermitted(message, "/removereference")
 
 
 @dp.message(Command("removetestgen", "removetg"))
@@ -78,7 +91,9 @@ async def cmdClearTestGen(message: types.Message):
                 "`/removetestgen <assignment_id>`\n"
                 "Use /list to see all the assignments",
                 parse_mode="MarkdownV2"
-            ); return
+            )
+            logMissuse(message, "removeretestgen")
+            return
 
         id = message.text.split()[1]
 
@@ -96,18 +111,25 @@ async def cmdClearTestGen(message: types.Message):
                 f"TestGen \(`{id}`\) removed successfuly",
                 parse_mode="MarkdownV2"
             )
+            logInfo(message, f"TestGen {id} succesfully removed")
+
         except CodeRecordNotFound:
             await message.answer("TestGen not found :(")
+            logInfo(message, f"TestGen {id} not found (/removetestgen)")
+
         except AssignmentNotFound:
             await message.answer("Corresponding assignment not found :(")
+            logInfo(message, f"Assignment not found (/removetestgen)")
 
         except Exception as e:
             await message.answer(
                 "Something went wrong:\n"
                 f"{str(e)}"
             )
+            logError(message,"while using /removetestgen\n\n" + str(e))
     else:
         await message.answer("Sorry, but you don't have permission to perform this command")
+        logNotPermitted(message, "/removetestgen")
 
 
 @dp.message(Command("uploadreference", "ureference", "uref", "aref"))
@@ -122,10 +144,12 @@ async def uploadReference(message: types.Message):
                 "Use /list to see all the assignments",
                 parse_mode="MarkdownV2"
             )
+            logMissuse(message, "uploadreference")
             return
 
         if message.document is None:
             await message.answer("You need to perform this command in the message with attached file")
+            logInfo(message, "File not attached for /uploadreference")
             return
 
         try:
@@ -149,17 +173,17 @@ async def uploadReference(message: types.Message):
             await assignmentsManager.setAssignment(assignment)
 
             await message.answer("Reference Successfully uploaded")
+            logInfo(message, "File succesfully uploaded (/uploadreference)")
 
         except AssignmentNotFound:
             await message.answer(
                 f"Assignment with id: `{id}` not found",
                 parse_mode="MarkdownV2"
             )
-
-        return
-
+            logInfo(message, f"Assignment not found {id} (/uploadreference)")
     else:
         await message.answer("Sorry, but you don't have permission to perform this command")
+        logNotPermitted(message, "uploadreference")
 
 
 @dp.message(Command("uploadtestgen", "utestgen", "utg", "atg"))
@@ -173,10 +197,12 @@ async def uploadTestGen(message: types.Message):
                 "Use /list to see all the assignments",
                 parse_mode="MarkdownV2"
             )
+            logMissuse(message, "uploadtestgen")
             return
 
         if message.document is None:
             await message.answer("You need to perform this command in the message with attached file")
+            logInfo(message, "File not attached for /uploadtestgen")
             return
 
         try:
@@ -199,16 +225,17 @@ async def uploadTestGen(message: types.Message):
             await assignmentsManager.setAssignment(assignment)
 
             await message.answer("TestGen Successfully uploaded")
+            logInfo(message, "File succesfully uploaded (/uploadtestgen)")
 
         except AssignmentNotFound:
             await message.answer(
                 f"Assignment with id: `{id}` not found",
                 parse_mode="MarkdownV2"
             )
-
-        return
+            logInfo(message, f"Assignment not found {id} (/uploadtestgen)")
     else:
         await message.answer("Sorry, but you don't have permission to perform this command")
+        logNotPermitted(message, "uploadtestgen")
 
 
 @dp.message(Command("addmoder", "amoder"))
@@ -218,6 +245,7 @@ async def addModer(message: types.Message):
 
         if len(args) == 1:
             await message.answer("Usage: /addmoder <user_id>")
+            logMissuse(message, "addmoder")
 
         else:
             moder_id = args[1]
@@ -231,6 +259,7 @@ async def addModer(message: types.Message):
                     "Experimental Settings > " 
                     "Show peer IDs in Profile"
                 )
+                logInfo(message, "Missused /addmoder (username instead of user-id)")
                 return
 
             try:
@@ -240,6 +269,7 @@ async def addModer(message: types.Message):
                     f"I don't know anyone with id {moder_id}\n"
                     "Make sure the user had texted me before"
                 )
+                logInfo(message, f"User not found {moder_id} (/addmoder)")
                 return
 
             moders = await modersManager.get(get_usernames=True)
@@ -247,8 +277,10 @@ async def addModer(message: types.Message):
             await modersManager.set(moders)
 
             await message.answer(f"Added new moderator: @{moder.username}")
+            logInfo(message, f"New moder added {moder_id}")
     else:
         await message.answer("Sorry, but you don't have permission to perform this command")
+        logNotPermitted(message, "addmoder")
 
 
 @dp.message(Command("removemoder"))
@@ -256,9 +288,9 @@ async def removeModer(message: types.Message):
     if await modersManager.hasModerWithId(message.from_user.id):
         args = message.text.split()
 
-
         if len(args) == 1:
             await message.answer("Usage: /removemoder <user_id or username>")
+            logMissuse(message, "removemoder")
         else:
 
             identifier = args[1]
@@ -268,10 +300,12 @@ async def removeModer(message: types.Message):
 
             if identifier in moders[0]:
                 await message.answer(f"I am not so stupid lol")
+                logInfo(message, "Tried to remove the head moderator")
                 return
 
             if identifier not in [id_or_name for m in moders for id_or_name in m]:
                 await message.answer(f"This person is not in moderator list")
+                logInfo(message, f"Tried to remove person that is not moderator: {identifier}")
                 return
 
             removed = ("id-here", "username-here")
@@ -286,8 +320,10 @@ async def removeModer(message: types.Message):
                 f"Removed moderator {Code(removed[0]).as_html()} @{removed[1]}",
                 parse_mode="HTML"
             )
+            logInfo(message, f"Removed moderator: {removed[0]} @{removed[1]}")
     else:
         await message.answer("Sorry, but you don't have permission to perform this command")
+        logNotPermitted(message, "removemoder")
 
 
 @dp.message(Command("moderlist", "mlist"))
@@ -298,9 +334,10 @@ async def moderList(message: types.Message):
             msg += f"- {Code(id).as_html()} @{username}\n"
 
         await message.answer(msg, parse_mode="HTML")
-
+        logInfo(message, "Showed moder list")
     else:
         await message.answer("Sorry, but you don't have permission to perform this command")
+        logNotPermitted(message, "moderlist")
 
 
 @dp.message(Command("moderhelp", "mhelp"))
@@ -324,9 +361,10 @@ async def moderHelp(message: types.Message):
             "/removetestgen <assignment id> - Removes the test generator\n"
             "/removereference <assignment id> - Removes the reference\n"
         )
-
+        logInfo(message, "Showed moder commands")
     else:
         await message.answer("Sorry, but you don't have permission to perform this command")
+        logNotPermitted(message, "moderhelp")
 
 
 @dp.message(Command("removeprobe", "rprobe"))
@@ -340,11 +378,13 @@ async def removeProbe(message: types.Message):
             if os.path.exists(f"data/probes/{args[1]}"):
                 shutil.rmtree(f"data/probes/{args[1]}")
                 await message.answer("Probe was removed successfully")
+                logInfo(message, f"Removed probe of @{args[1]}")
             else:
                 await message.answer("Such probe does not exists")
-
+                logInfo(message, "Probe to remove not found")
     else:
         await message.answer("Sorry, but you don't have permission to perform this command")
+        logNotPermitted(message, "removeprobe")
 
 
 @dp.message(Command("probelist", "probes"))
@@ -355,9 +395,10 @@ async def probeList(message: types.Message):
             msg += probe + "\n"
 
         await message.answer(msg)
-
+        logInfo(message, "Showed probe list")
     else:
         await message.answer("Sorry, but you don't have permission to perform this command")
+        logNotPermitted(message, "probelist")
 
 
 @dp.message(Command("assignments", "list"))
@@ -374,6 +415,7 @@ async def listAssignments(message: types.Message):
 
     else:
         await message.answer("Sorry, but you don't have permission to perform this command")
+        logNotPermitted(message, "assignments")
 
 
 
@@ -392,12 +434,13 @@ async def addAssignment(message: types.Message):
                 "Consider uploading reference and testgen for it",
                 parse_mode="MarkdownV2"
             )
-
+            logInfo(message, f"Added assignment {new_assignment}")
         except AlreadyExists:
             await message.answer(
                 f"Assignment named: \"{assignment_name}\" already exists\n"
                 "Unusual, but consider renaming"
             )
+            logInfo(message, f"Assignment {new_assignment.name} already exists")
 
         except NoNameProvided:
             await message.answer(
@@ -405,9 +448,11 @@ async def addAssignment(message: types.Message):
                 "`/addassignment <assignment name>`",
                 parse_mode="MarkdownV2"
             )
+            logMissuse(message, "addassignment")
         
     else:
         await message.answer("Sorry, but you don't have permission to perform this command")
+        logNotPermitted(message, "addassignment")
 
 
 @dp.message(Command("refresh"))
@@ -439,11 +484,17 @@ async def refreshAssignments(message: types.Message):
             + (status_message or "Nothing New"),
             parse_mode="MarkdownV2"
         )
+        logInfo(message, "Assignments Refreshed")
 
     else:
         await message.answer("Sorry, but you don't have permission to perform this command")
+        logNotPermitted(message, "refresh")
 
 
 @dp.message(Command("critical", "boom"))
 async def onCritical(message: types.Message):
-    logging.critical("Something real bad happened")
+    if await modersManager.hasModerWithId(message.from_user.id):
+        logCritical(message, "Testing critical logging, BOOM")
+    else:
+        # skipping silently, no message returned
+        logNotPermitted(message, "critical")

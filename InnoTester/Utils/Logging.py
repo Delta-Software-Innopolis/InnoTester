@@ -21,6 +21,9 @@ class TelegramLogHandler(logging.Handler):
         try:
             msg = self.format(record)
 
+            try: asyncio.get_running_loop()
+            except: return
+
             for id in self.reseiver_ids:
                 asyncio.create_task(
                     self.bot.send_message(
@@ -32,14 +35,23 @@ class TelegramLogHandler(logging.Handler):
         except Exception as e:
             self.handleError(record)
 
+        
+class UserFormatter(logging.Formatter):
+    def format(self, record):
+        if not hasattr(record, 'user_id'):
+            record.user_id = 'N/A'
+        if not hasattr(record, 'username'):
+            record.username = 'unknown'
+        return super().format(record)
 
-readableFormatter = logging.Formatter(
-    "%(asctime)s [%(levelname)s] %(message)s",
+
+readableFormatter = UserFormatter(
+    "%(asctime)s [%(levelname)s] (%(user_id)s @%(username)s) %(message)s",
     datefmt=DATEFMT
 )
 
 jsonFormatter = JsonFormatter(
-    "{asctime}{levelname}{message}{exc_info}",
+    "{asctime}{levelname}{message}",
     style="{",
     datefmt=DATEFMT
 )
@@ -81,3 +93,50 @@ logging.basicConfig(
         telegramHandler
     ]
 )
+
+
+from typing import Literal, TypeAlias
+from aiogram.types import Message, CallbackQuery
+
+LevelStr: TypeAlias = Literal["debug", "info", "warn", "error", "critical"]
+
+
+def _rawLog(event: Message | CallbackQuery, level: int, msg: str):
+    user = event.from_user
+    logging.log(
+        level, msg,
+        extra={
+            "user_id": user.id,
+            "username": user.username
+        }
+    )
+
+
+def log(event: Message | CallbackQuery, level: LevelStr, msg: str):
+    match level:
+        case 'debug': level = logging.DEBUG
+        case 'info': level = logging.INFO
+        case 'warn': level = logging.WARN
+        case 'error': level = logging.ERROR
+        case 'critical': level = logging.CRITICAL
+
+    return _rawLog(event, level, msg)
+
+
+def logInfo(event: Message | CallbackQuery, msg: str):
+    return _rawLog(event, logging.INFO, msg)
+
+def logError(event: Message | CallbackQuery, msg: str):
+    return _rawLog(event, logging.ERROR, msg)
+
+def logCritical(event: Message | CallbackQuery, msg: str):
+    return _rawLog(event, logging.CRITICAL, msg)
+
+
+def logMissuse(event: Message | CallbackQuery, command: str):
+    if command.startswith('/'): command = command[1:]
+    return logInfo(event, f"Missused /{command}")
+
+def logNotPermitted(event: Message | CallbackQuery, command: str):
+    if command.startswith('/'): command = command[1:]
+    return logInfo(event, f"Not permitted to use /{command}")
