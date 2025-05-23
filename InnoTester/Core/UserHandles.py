@@ -1,7 +1,3 @@
-import asyncio
-import aiofiles
-import os
-import shutil
 from aiogram import F
 from aiogram.filters import Command, CommandStart, StateFilter
 from aiogram.types import Message, CallbackQuery
@@ -11,7 +7,9 @@ from aiogram.exceptions import *
 from aiogram.types import FSInputFile
 
 from InnoTester.Core.InnoTesterBot import *
+from InnoTester.Core.Logic.TestingProcess import *
 from InnoTester.Utils.Keyboards import *
+import InnoTester.Utils.Config as Config
 
 import aiodocker
 import aiodocker.exceptions
@@ -286,13 +284,11 @@ async def onChooseAssignment(query: CallbackQuery, state: FSMContext):
 
 
 @dp.message(F.document)
-async def onDocument(message: Message, state: FSMContext): # TODO: please, handle should not be
-    dockerClient = aiodocker.Docker()                      #               93 lines of code XD
+async def onDocument(message: Message, state: FSMContext):
     data = await state.get_data()
 
     assignment = data.get("assignment")
     last_message: Message = data.get("last_message")
-
 
     if not message.from_user.username:
         await message.answer(
@@ -300,7 +296,9 @@ async def onDocument(message: Message, state: FSMContext): # TODO: please, handl
             "Set one in the Telegram settings to proceed"
         ); return
 
-    if os.path.exists("data/probes/" + message.from_user.username):
+    process = TestingProcess(assignment, message.from_user.username)
+
+    if process.isWorkDirExists():
         await last_message.edit_text(
             text=(
                 "Testing started\n"
@@ -314,7 +312,6 @@ async def onDocument(message: Message, state: FSMContext): # TODO: please, handl
 
     if last_message: # That's important, to delete the message before document sent
         await last_message.delete()    
-
 
     if not assignment:
         last_message = await message.answer(
@@ -341,26 +338,10 @@ async def onDocument(message: Message, state: FSMContext): # TODO: please, handl
         return
 
     await logger.info(f"{message.from_user.username} started testing solution ({probeExtension})")
-    os.mkdir("data/probes/" + message.from_user.username)
-    await instance.download_file(path, f"data/probes/{message.from_user.username}/probe.{probeExtension}")
+    process.createWorkDir()
+    await instance.download_file(path, os.path.join(PROBES_PATH, message.from_user.username, f"probe.{probeExtension}"))
 
-    testCount = 100
-
-    async with aiofiles.open(f"data/probes/{message.from_user.username}/iterations.txt", "w") as iters:
-        if message.caption is not None:
-            try:
-                await iters.write(f"{int(message.caption)}")
-                testCount = int(message.caption)
-            except ValueError:
-                await iters.write("100")
-        else:
-            await iters.write("100")
-
-    async with aiofiles.open(f"data/probes/{message.from_user.username}/protocol.txt", "w") as proto:
-        await proto.write("")
-
-    async with aiofiles.open(f"data/probes/{message.from_user.username}/comparison_page.html", "w") as proto:
-        await proto.write("")
+    testsCount = await process.prepare(message.caption)
 
     last_message = await message.answer(
         text=(
@@ -374,56 +355,33 @@ async def onDocument(message: Message, state: FSMContext): # TODO: please, handl
     await state.set_data(data)
 
     pwd = os.getcwd()
-    referenceExtension = Config.getLanguage(data['assignment'].reference_id, f"{pwd}/data/references")
-    testgenExtension = Config.getLanguage(data['assignment'].testgen_id, f"{pwd}/data/testgens")
-    username = message.from_user.username
 
-
-    containerConfig = {
-        "Image": Config.dockerImageNum,
-        "HostConfig": {
-            "AutoRemove": True,
-            "Memory": 256 * 1024 * 1024,  # 256MB
-            "Binds": [
-                f"{pwd}/resources/compile.yaml:/testEnv/compile.yaml",
-                f"{pwd}/data/probes/{username}/probe.{probeExtension}:/testEnv/probe.{probeExtension}",
-                f"{pwd}/data/references/{data['assignment'].reference_id}.{referenceExtension}:/testEnv/reference.{referenceExtension}",
-                f"{pwd}/data/testgens/{data['assignment'].testgen_id}.{testgenExtension}:/testEnv/testgen.{testgenExtension}",
-                f"{pwd}/data/probes/{username}/protocol.txt:/testEnv/protocol.txt",
-                f"{pwd}/data/probes/{username}/comparison_page.html:/testEnv/comparison_page.html",
-                f"{pwd}/data/probes/{username}/iterations.txt:/testEnv/iterations.txt",
-            ],
-        },
-        "WorkingDir": "/testEnv",
-    }
+    referenceExtension = Config.getLanguage(data['assignment'].reference_id, os.path.join(pwd, REFERENCES_PATH))
+    testgenExtension = Config.getLanguage(data['assignment'].testgen_id, os.path.join(pwd, TESTGENS_PATH))
 
     try:
-        container = await dockerClient.containers.run(config=containerConfig)
+        await process.run(referenceExtension, probeExtension, testgenExtension, data['assignment'].reference_id,
+                          data['assignment'].testgen_id)
 
-
-        data['container'] = container
+        data['testing_process'] = process
         await state.set_data(data)
 
-        containerLog = []
-        async for log in container.log(stderr=True, follow=True):
-            containerLog.append(log)
+        containerLog = await process.getContainerLog()
 
-        result = await container.wait()
+        result = await process.getResult()
         data = await state.get_data()
 
-        if "testing_killed" in data:
+        if process.isTerminated():
             await last_message.edit_text(
                 text=(
-                    "Testing process terminated"
+                    "❌ Testing process terminated"
                 ),
                 reply_markup=CHANGE_ASSIGNMENT_KB
             )
-            shutil.rmtree(f"data/probes/{message.from_user.username}", ignore_errors=True)
-            del data["testing_killed"]
 
             await state.set_data(data)
-            await dockerClient.close()
-
+            process.removeWorkdir()
+            await process.closeClient()
             return
 
         if result['StatusCode'] != 0:
@@ -435,20 +393,20 @@ async def onDocument(message: Message, state: FSMContext): # TODO: please, handl
                 reply_markup=CHANGE_ASSIGNMENT_KB
             )
         else:
-            async with aiofiles.open(f"data/probes/{message.from_user.username}/protocol.txt") as proto:
+            async with aiofiles.open(os.path.join(PROBES_PATH, message.from_user.username, "protocol.txt")) as proto:
                 ans = await proto.readlines()
                 await logger.info(f"Finished testing {message.from_user.username}'s solution: {''.join(ans)}")
                 try:
-                    await last_message.edit_text(**Config.errorHandler(ans, testCount).as_kwargs(), reply_markup=CHANGE_ASSIGNMENT_KB)
+                    await last_message.edit_text(**Config.errorHandler(ans, testsCount).as_kwargs(), reply_markup=CHANGE_ASSIGNMENT_KB)
                 except TelegramBadRequest as e:
-                    protocol = FSInputFile(f"data/probes/{message.from_user.username}/protocol.txt")
+                    protocol = FSInputFile(os.path.join(PROBES_PATH, message.from_user.username, "protocol.txt"))
                     await message.answer_document(protocol)
 
-            async with aiofiles.open(f"data/probes/{message.from_user.username}/comparison_page.html") as comparison:
+            async with aiofiles.open(os.path.join(PROBES_PATH, message.from_user.username, "comparison_page.html")) as comparison:
                 comp = await comparison.readlines()
 
                 if len(comp) != 0:
-                    compPage = FSInputFile(f"data/probes/{message.from_user.username}/comparison_page.html")
+                    compPage = FSInputFile(os.path.join(PROBES_PATH, message.from_user.username, "comparison_page.html"))
                     await message.answer_document(compPage)
 
 
@@ -469,8 +427,8 @@ async def onDocument(message: Message, state: FSMContext): # TODO: please, handl
             reply_markup=CHANGE_ASSIGNMENT_KB
         )
 
-    shutil.rmtree(f"data/probes/{message.from_user.username}", ignore_errors=True)
-    await dockerClient.close()
+    process.removeWorkdir()
+    await process.closeClient()
 
 
 
@@ -486,7 +444,7 @@ async def onStopTesting(query: CallbackQuery, state: FSMContext):
             reply_markup=CHOOSE_ASSIGNMENT_KB
         ); return
 
-    if "container" not in data.keys():
+    if "testing_process" not in data.keys():
         await query.message.edit_text(
             text=(
                 "Testing process was not ran. Nothing to stop.\n"
@@ -495,13 +453,11 @@ async def onStopTesting(query: CallbackQuery, state: FSMContext):
 
         return
 
-    cont = data["container"]
+    proc: TestingProcess = data["testing_process"]
 
-    del data["container"]
-    data["testing_killed"] = True
+    del data["testing_process"]
     await state.set_data(data)
-
-    await cont.kill()
+    await proc.terminate()
 
     await query.message.edit_text(
         text=(

@@ -6,10 +6,7 @@ from typing import Literal
 
 from InnoTester.Core.Logic.Models import *
 from InnoTester.Core.Logic.Exceptions import *
-
-
-REFERENCES_PATH = "data/references"
-TESTGENS_PATH = "data/testgens"
+from InnoTester.Utils.Config import REFERENCES_PATH, TESTGENS_PATH
 
 PATHS = {
     "references": REFERENCES_PATH,

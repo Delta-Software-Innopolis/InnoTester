@@ -14,12 +14,17 @@ if len(sys.argv) == 1:
 
 dockerImageNum = sys.argv[1]
 
+REFERENCES_PATH = os.path.join("data", "references")
+TESTGENS_PATH = os.path.join("data", "testgens")
+PROBES_PATH = os.path.join("data", "probes")
+RESOURCES_PATH = "resources"
+
 
 def createTemplateIfNotExists(
     file_path: str,
     template: str
 ):
-    """ 
+    """
     Ensures that file exists (in `file_path`) \\
     If not:
     - creates file
@@ -75,6 +80,16 @@ with open("resources/banlist.yaml") as f:
     banlist = yaml.safe_load(f)['banned']
     if "user-id" in banlist:
         banlist.remove("user-id")
+
+def getLanguage(filename, dir = "."):
+    for file in os.listdir(dir):
+        name = file.split(".")[0]
+        extension = file.split(".")[-1]
+
+        if filename == name:
+            return extension
+
+    return "undefined"
 
 
 def errorHandler(protocol, testCount: int):
