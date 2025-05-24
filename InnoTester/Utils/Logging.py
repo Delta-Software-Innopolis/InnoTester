@@ -2,8 +2,10 @@ import os
 import logging
 import aiogram
 import asyncio
-from logging.handlers import RotatingFileHandler, QueueHandler
+from typing import Literal, TypeAlias
+from logging.handlers import RotatingFileHandler
 from pythonjsonlogger.json import JsonFormatter
+from aiogram.types import Message, CallbackQuery
 
 import InnoTester.Utils.Config as Config
 
@@ -21,8 +23,10 @@ class TelegramLogHandler(logging.Handler):
         try:
             msg = self.format(record)
 
-            try: asyncio.get_running_loop()
-            except: return
+            try:
+                asyncio.get_running_loop()
+            except RuntimeError:
+                return
 
             for id in self.reseiver_ids:
                 asyncio.create_task(
@@ -32,7 +36,7 @@ class TelegramLogHandler(logging.Handler):
                     )
                 )
 
-        except Exception as e:
+        except Exception:
             self.handleError(record)
 
         
@@ -65,7 +69,8 @@ streamHandler = logging.StreamHandler()
 streamHandler.setLevel(logging.DEBUG)
 streamHandler.setFormatter(readableFormatter)
 
-if not os.path.exists(path := "data/logs"): os.mkdir(path)
+if not os.path.exists(path := "data/logs"):
+    os.mkdir(path)
 fileHandler = RotatingFileHandler(
     "data/logs/InnoTester.log",
     encoding="utf-8",
@@ -95,9 +100,6 @@ logging.basicConfig(
 )
 
 
-from typing import Literal, TypeAlias
-from aiogram.types import Message, CallbackQuery
-
 LevelStr: TypeAlias = Literal["debug", "info", "warn", "error", "critical"]
 
 
@@ -114,11 +116,11 @@ def _rawLog(event: Message | CallbackQuery, level: int, msg: str):
 
 def log(event: Message | CallbackQuery, level: LevelStr, msg: str):
     match level:
-        case 'debug': level = logging.DEBUG
-        case 'info': level = logging.INFO
-        case 'warn': level = logging.WARN
-        case 'error': level = logging.ERROR
-        case 'critical': level = logging.CRITICAL
+        case 'debug': level = logging.DEBUG # noqa E701
+        case 'info': level = logging.INFO # noqa E701
+        case 'warn': level = logging.WARN # noqa E701
+        case 'error': level = logging.ERROR # noqa E701
+        case 'critical': level = logging.CRITICAL # noqa E701
 
     return _rawLog(event, level, msg)
 
@@ -134,9 +136,9 @@ def logCritical(event: Message | CallbackQuery, msg: str):
 
 
 def logMissuse(event: Message | CallbackQuery, command: str):
-    if command.startswith('/'): command = command[1:]
+    if command.startswith('/'): command = command[1:] # noqa E701
     return logInfo(event, f"Missused /{command}")
 
 def logNotPermitted(event: Message | CallbackQuery, command: str):
-    if command.startswith('/'): command = command[1:]
+    if command.startswith('/'): command = command[1:] # noqa E701
     return logInfo(event, f"Not permitted to use /{command}")

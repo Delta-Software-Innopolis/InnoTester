@@ -4,8 +4,8 @@ import json
 import asyncio
 from typing import Literal
 
-from InnoTester.Core.Logic.Models import *
-from InnoTester.Core.Logic.Exceptions import *
+from InnoTester.Core.Logic.Models import CodeRecord, Reference, TestGen
+from InnoTester.Core.Logic.Exceptions import CodeRecordNotFound
 
 
 REFERENCES_PATH = "data/references"
@@ -82,10 +82,12 @@ class CodeManager:
 
 
     def __readJSONSync(self, which: Literal["references", "testgens"]) -> list[CodeRecord]:
-        data = []; path = f"data/{which}.json"
+        data = []
+        path = f"data/{which}.json"
 
         if not os.path.exists(path):
-            with open(path, 'w') as file: file.write("[]")
+            with open(path, 'w') as file:
+                file.write("[]")
 
         with open(path, 'r') as file:
             data = json.load(file)
@@ -97,7 +99,8 @@ class CodeManager:
 
     
     async def __readJSON(self, which: Literal["references", "testgens"]) -> list[CodeRecord]:
-        data = []; path = f"data/{which}.json"
+        data = []
+        path = f"data/{which}.json"
 
         async with self.__ioLocks[which]:
             async with aiofiles.open(path, 'r') as file:

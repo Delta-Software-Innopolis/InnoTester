@@ -1,16 +1,20 @@
+import os
+import shutil
+from io import BytesIO
 from aiogram import types
 from aiogram.exceptions import TelegramBadRequest
 from aiogram.filters.command import Command
 from aiogram.utils.formatting import Code
-import os
-import shutil
-from io import BytesIO
-
 
 from InnoTester.Core.InnoTesterBot import (
     dp, instance, assignmentsManager, codeManager, modersManager
 )
-from InnoTester.Utils.Exceptions import *
+from InnoTester.Utils.Exceptions import (
+    CodeRecordNotFound,
+    AssignmentNotFound,
+    AlreadyExists,
+    NoNameProvided
+)
 from InnoTester.Utils.Logging import (
     logInfo, logError, logCritical,
     logMissuse, logNotPermitted
@@ -118,7 +122,7 @@ async def cmdClearTestGen(message: types.Message):
 
         except AssignmentNotFound:
             await message.answer("Corresponding assignment not found :(")
-            logInfo(message, f"Assignment not found (/removetestgen)")
+            logInfo(message, "Assignment not found (/removetestgen)")
 
         except Exception as e:
             await message.answer(
@@ -135,7 +139,7 @@ async def cmdClearTestGen(message: types.Message):
 async def uploadReference(message: types.Message):
     if await modersManager.hasModerWithId(message.from_user.id):
 
-        if (caption := message.caption) == None or len(caption.split()) != 2:
+        if (caption := message.caption) is None or len(caption.split()) != 2:
             await message.answer(
                 "Usage:\n"
                 "`/uploadreference <assignment_id>`\n"
@@ -188,7 +192,7 @@ async def uploadReference(message: types.Message):
 @dp.message(Command("uploadtestgen", "utestgen", "utg", "atg"))
 async def uploadTestGen(message: types.Message):
     if await modersManager.hasModerWithId(message.from_user.id):
-        if (caption := message.caption) == None or len(caption.split()) != 2:
+        if (caption := message.caption) is None or len(caption.split()) != 2:
             await message.answer(
                 "Usage:\n"
                 "`/uploadtestgen <assignment_id>`\n"
@@ -263,7 +267,7 @@ async def addModer(message: types.Message):
 
             try:
                 moder = await instance.get_chat(moder_id)
-            except TelegramBadRequest as e:
+            except TelegramBadRequest:
                 await message.answer(
                     f"I don't know anyone with id {moder_id}\n"
                     "Make sure the user had texted me before"
@@ -293,17 +297,18 @@ async def removeModer(message: types.Message):
         else:
 
             identifier = args[1]
-            if identifier.isnumeric(): identifier = int(identifier)
+            if identifier.isnumeric():
+                identifier = int(identifier)
 
             moders = await modersManager.get(get_usernames=True)
 
             if identifier in moders[0]:
-                await message.answer(f"I am not so stupid lol")
+                await message.answer("I am not so stupid lol")
                 logInfo(message, "Tried to remove the head moderator")
                 return
 
             if identifier not in [id_or_name for m in moders for id_or_name in m]:
-                await message.answer(f"This person is not in moderator list")
+                await message.answer("This person is not in moderator list")
                 logInfo(message, f"Tried to remove person that is not moderator: {identifier}")
                 return
 

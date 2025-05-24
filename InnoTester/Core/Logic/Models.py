@@ -30,9 +30,9 @@ class Assignment:
     def from_dict(data: dict) -> "Assignment":
         data_copy = data.copy()
         match data["status"]:
-            case "NOTCONFIGURED": data_copy["status"] = Assignment.Status.NOTCONFIGURED
-            case "RUNNING": data_copy["status"] = Assignment.Status.RUNNING
-            case "CLOSED": data_copy["status"] = Assignment.Status.CLOSED
+            case "NOTCONFIGURED": data_copy["status"] = Assignment.Status.NOTCONFIGURED # noqa E701
+            case "RUNNING": data_copy["status"] = Assignment.Status.RUNNING # noqa E701
+            case "CLOSED": data_copy["status"] = Assignment.Status.CLOSED # noqa E701
         return Assignment(**data_copy)
 
     def to_dict(self) -> dict:
@@ -49,9 +49,9 @@ class Assignment:
     def __str__(self) -> str:
         status_emoji = None
         match self.status:
-            case Assignment.Status.NOTCONFIGURED: status_emoji = "🛠"
-            case Assignment.Status.RUNNING: status_emoji = "✅"
-            case Assignment.Status.CLOSED: status_emoji = "🌙"
+            case Assignment.Status.NOTCONFIGURED: status_emoji = "🛠" # noqa E701
+            case Assignment.Status.RUNNING: status_emoji = "✅" # noqa E701
+            case Assignment.Status.CLOSED: status_emoji = "🌙" # noqa E701
         return (
             fr"{status_emoji} {self.name}"
         )
@@ -59,9 +59,9 @@ class Assignment:
     def to_list_with_id(self) -> str:
         status_emoji = None
         match self.status:
-            case Assignment.Status.NOTCONFIGURED: status_emoji = "🛠"
-            case Assignment.Status.RUNNING: status_emoji = "✅"
-            case Assignment.Status.CLOSED: status_emoji = "🌙"
+            case Assignment.Status.NOTCONFIGURED: status_emoji = "🛠" # noqa E701
+            case Assignment.Status.RUNNING: status_emoji = "✅" # noqa E701
+            case Assignment.Status.CLOSED: status_emoji = "🌙" # noqa E701
         return (
             fr"{status_emoji} \(`{self.id}`\) {self.name}"
         )
@@ -86,5 +86,5 @@ class CodeRecord:
             "author": self.author
         }
 
-class Reference(CodeRecord): pass
-class TestGen(CodeRecord): pass
+class Reference(CodeRecord): pass # noqa E701
+class TestGen(CodeRecord): pass # noqa E701

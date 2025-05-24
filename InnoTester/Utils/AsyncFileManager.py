@@ -2,7 +2,7 @@ import asyncio
 import aiofiles
 
 from contextlib import asynccontextmanager
-from typing import Literal, AsyncGenerator
+from typing import AsyncGenerator
 from aiofiles.threadpool.text import AsyncTextIOWrapper
 
 

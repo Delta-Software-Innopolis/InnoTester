@@ -1,11 +1,8 @@
-import aiofiles
 import os
 import sys
 import yaml
-import aiodocker
-from typing import overload
 
-from aiogram.utils.formatting import *
+from aiogram.utils.formatting import Text, Code
 
 
 if len(sys.argv) == 1:
@@ -109,4 +106,4 @@ def errorHandler(protocol, testCount: int):
                 case "testing":
                     return Text(f"An error occurred during the testing process. Message: {''.join(protocol[2::])}")
                 case "answer":
-                    return Text(f"Got invalid answer from probe program. Message:\n") + Code(''.join(protocol[2::]))
+                    return Text("Got invalid answer from probe program. Message:\n") + Code(''.join(protocol[2::]))

@@ -1,4 +1,5 @@
 from typing import overload
+
 from InnoTester.Utils import AsyncFileManager
 
 
@@ -23,7 +24,8 @@ class ModersManager:
         async with self._file.open('r') as file:
             moders = list(map(lambda x: x.strip("\n").split(' @'), await file.readlines()))
             moders = [(int(id), username) for id, username in moders]
-            if not get_usernames: moders = [m[0] for m in moders]
+            if not get_usernames:
+                moders = [m[0] for m in moders]
             return moders
 
     async def set(self, moders: list[tuple[int, str]]):

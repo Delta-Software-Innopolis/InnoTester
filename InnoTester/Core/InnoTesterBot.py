@@ -1,6 +1,6 @@
 from aiogram import Bot, Dispatcher
 import InnoTester.Utils.Config as Config
-from InnoTester.Utils.Logging import *
+from InnoTester.Utils.Logging import logging
 
 from InnoTester.Core.Logic import (
     AssignmentsManager, CodeManager,

@@ -4,7 +4,7 @@ import hashlib
 import shutil
 import yaml
 
-from comparison_page_generator import *
+from comparison_page_generator import create_comparison_page
 
 class CompileCommand:
     def __init__(self, parameters):
@@ -43,12 +43,12 @@ class Tester:
                 self.iterations = int(f.readline())
             except ValueError:
                 with open("./protocol.txt", "w") as protocol:
-                    protocol.write(f"error\nrunning\nInvalid iterations count")
+                    protocol.write("error\nrunning\nInvalid iterations count")
                 exit(1)
 
         if not (1 <= self.iterations <= 300):
             with open("./protocol.txt", "w") as protocol:
-                protocol.write(f"error\nrunning\nInvalid iterations count")
+                protocol.write("error\nrunning\nInvalid iterations count")
 
             exit(1)
 
@@ -155,7 +155,7 @@ class Tester:
     def moveReferenceOutput(self):
         if not os.path.exists("./output.txt"):
             with open("./protocol.txt", "w") as protocol:
-                protocol.write(f"error\ntesting\nIt seems reference program did not create output.txt file.")
+                protocol.write("error\ntesting\nIt seems reference program did not create output.txt file.")
 
             exit(1)
 
@@ -171,7 +171,7 @@ class Tester:
     def compareResults(self):
         if not os.path.exists("./output.txt"):
             with open("./protocol.txt", "w") as protocol:
-                protocol.write(f"error\ntesting\nIt seems probe program did not create output.txt file.")
+                protocol.write("error\ntesting\nIt seems probe program did not create output.txt file.")
 
             exit(1)
 
@@ -204,7 +204,7 @@ class Tester:
                 exit()
 
         with open("./protocol.txt", "w") as protocol:
-            protocol.write(f"ok\n")
+            protocol.write("ok\n")
 
 
 

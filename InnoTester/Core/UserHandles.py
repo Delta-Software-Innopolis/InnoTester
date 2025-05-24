@@ -1,25 +1,32 @@
-import asyncio
-import aiofiles
 import os
 import shutil
-import logging
+import aiofiles
 from aiogram import F
 from aiogram.filters import Command, CommandStart, StateFilter
 from aiogram.types import Message, CallbackQuery
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import StatesGroup, State
-from aiogram.exceptions import *
+from aiogram.exceptions import TelegramBadRequest
 from aiogram.types import FSInputFile
-
-from InnoTester.Core.InnoTesterBot import *
-from InnoTester.Utils.Keyboards import *
-from InnoTester.Utils.Logging import (
-    logInfo, logError, logCritical,
-    logMissuse, logNotPermitted
-)
 
 import aiodocker
 import aiodocker.exceptions
+
+from InnoTester.Core.Logic.Models import Assignment
+from InnoTester.Core.InnoTesterBot import (
+    instance, dp, Config,
+    modersManager, assignmentsManager
+)
+from InnoTester.Utils.Keyboards import (
+    CHOOSE_ASSIGNMENT_KB, CHOOSE_ASSIGNMENT_CB,
+    CHANGE_ASSIGNMENT_KB,
+    SHARE_KB, SHARE_CANCEL_KB, SHARE_CANCEL_CB,
+    CHOOSE_ASSIGNMENT_SHARE_KB, CHOOSE_ASSIGNMENT_SHARE_CB,
+    SHARE_REFERENCE_CB, SHARE_TESTGEN_CB,
+    ASSIGNMENT_CB_PREFIX, STOP_CB_PREFIX,
+    stopTestKeyboard, assigListKeyboard,
+)
+from InnoTester.Utils.Logging import logInfo, logError
 
 
 class ShareStates(StatesGroup):
@@ -35,7 +42,8 @@ async def onCmdStart(message: Message, state: FSMContext):
     data = await state.get_data()
     
     last_message: Message = data.get("last_message")
-    if last_message: await last_message.delete()
+    if last_message:
+        await last_message.delete()
 
     last_message = await message.answer(
         "Welcome to InnoTester, blah blah",
@@ -52,7 +60,8 @@ async def onCmdShare(message: Message, state: FSMContext):
     data = await state.get_data()
 
     last_message: Message = data.get("last_message")
-    if last_message: await last_message.delete()
+    if last_message:
+        await last_message.delete()
 
     assignment: Assignment = data.get("assignment")
 
@@ -113,7 +122,8 @@ async def onShareReferenceDocument(message: Message, state: FSMContext):
     data = await state.get_data()
 
     last_message: Message = data["last_message"]
-    if last_message: await last_message.delete()
+    if last_message:
+        await last_message.delete()
 
     assignment: Assignment = data.get("assignment")
 
@@ -164,7 +174,8 @@ async def onShareTestGenDocument(message: Message, state: FSMContext):
         await onCmdShare(message, state)
 
     last_message: Message = data["last_message"]
-    if last_message: await last_message.delete()
+    if last_message:
+        await last_message.delete()
 
     # TODO : add verificitaion of username != None
 
@@ -224,7 +235,7 @@ async def onCancelShare(query: CallbackQuery, state: FSMContext):
             ),
             reply_markup=CHOOSE_ASSIGNMENT_SHARE_KB
         )
-        logInfo(query, f"Canceled /share (assignment NOT chosen)")
+        logInfo(query, "Canceled /share (assignment NOT chosen)")
 
 
 @dp.callback_query(F.data == CHOOSE_ASSIGNMENT_CB)
@@ -472,7 +483,7 @@ async def onDocument(message: Message, state: FSMContext): # TODO: please, handl
                 ans = await proto.readlines()
                 try:
                     await last_message.edit_text(**Config.errorHandler(ans, testCount).as_kwargs(), reply_markup=CHANGE_ASSIGNMENT_KB)
-                except TelegramBadRequest as e:
+                except TelegramBadRequest:
                     protocol = FSInputFile(f"data/probes/{message.from_user.username}/protocol.txt")
                     await message.answer_document(protocol)
                 logInfo(message, f"Finished testing: {''.join(ans)}")

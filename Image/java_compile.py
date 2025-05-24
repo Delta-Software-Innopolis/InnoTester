@@ -1,9 +1,10 @@
 import os
 import re
-import subprocess
 import sys
+import pwd
+import grp
+import subprocess
 from pathlib import Path
-import pwd, grp, os
 
 
 class JavaCompileError(Exception):

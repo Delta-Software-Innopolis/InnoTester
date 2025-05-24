@@ -1,15 +1,17 @@
 import os
-import aiofiles
 import json
-import asyncio
 
-from InnoTester.Core.Logic.Models import *
-from InnoTester.Core.Logic.Exceptions import *
+from InnoTester.Core.Logic.Models import Assignment
 from InnoTester.Core.Logic import RIDGenerator
 from InnoTester.Utils import AsyncFileManager
+from InnoTester.Core.Logic.Exceptions import (
+    AlreadyExists, NoNameProvided,
+    AssignmentNotFound
+)
 
 
-if not os.path.exists("data"): os.mkdir("data")
+if not os.path.exists("data"):
+    os.mkdir("data")
 
 
 ASSIGNMENTS_FILE = "data/assignments.json"
@@ -22,7 +24,8 @@ class AssignmentsManager:
 
     
     async def addAssignment(self, name: str) -> Assignment:
-        if not name: raise NoNameProvided()
+        if not name:
+            raise NoNameProvided()
         if any(a.name == name for a in self.cached):
             raise AlreadyExists(name)
         new_assignment=Assignment(
