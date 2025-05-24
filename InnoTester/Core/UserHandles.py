@@ -131,7 +131,13 @@ async def onShareReferenceDocument(message: Message, state: FSMContext):
         logInfo(message, "Failed to send reference (no assignment)")
         await onCmdShare(message, state)
 
-    # TODO : add verificitaion of username != None
+    if not message.from_user.username:
+        await message.answer(
+            "To use the bot you need to have a @username\n"
+            "Set one in the Telegram settings to proceed"
+        )
+        logInfo(message, "Failed share reference (no username)")
+        return
 
     last_message = await message.answer(
         "Thanks, hero!\n"
@@ -177,7 +183,13 @@ async def onShareTestGenDocument(message: Message, state: FSMContext):
     if last_message:
         await last_message.delete()
 
-    # TODO : add verificitaion of username != None
+    if not message.from_user.username:
+        await message.answer(
+            "To use the bot you need to have a @username\n"
+            "Set one in the Telegram settings to proceed"
+        )
+        logInfo(message, "Failed share testgen (no username)")
+        return
 
     last_message = await message.answer(
         "Thanks, hero!\n"
@@ -194,7 +206,7 @@ async def onShareTestGenDocument(message: Message, state: FSMContext):
 
     moder_count = 0
     for moder_id in await modersManager.get(): # TODO: make adding testgen by buttons
-        await instance.send_document(             #       instead of manual
+        await instance.send_document(          #       instead of manual
             moder_id,
             caption=(
                 "One hero want to share his TestGen\!\n"
