@@ -1,6 +1,6 @@
 # ITP Helper Bot: Tester for Assignments
 
-![Logo](logo.jpg)
+![Logo](resources/logo.jpg)
 
 ### Brief description
 
