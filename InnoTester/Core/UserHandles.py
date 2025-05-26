@@ -1,6 +1,7 @@
 import os
 import shutil
 import aiofiles
+from typing import Any, Literal, overload
 from aiogram import F
 from aiogram.filters import Command, CommandStart, StateFilter
 from aiogram.types import Message, CallbackQuery
@@ -26,7 +27,10 @@ from InnoTester.Utils.Keyboards import (
     ASSIGNMENT_CB_PREFIX, STOP_CB_PREFIX,
     stopTestKeyboard, assigListKeyboard,
 )
+from InnoTester.Utils.FSMWrapper import FSMWrapper
 from InnoTester.Utils.Logging import logInfo, logError
+
+from InnoTester.Core import answers
 
 
 class ShareStates(StatesGroup):
@@ -36,265 +40,143 @@ class ShareStates(StatesGroup):
 
 
 @dp.message(CommandStart())
-async def onCmdStart(message: Message, state: FSMContext):
-    await state.set_state(None) # to revert the ShareStates
-
-    data = await state.get_data()
-    
-    last_message: Message = data.get("last_message")
-    if last_message:
-        await last_message.delete()
-
-    last_message = await message.answer(
-        "Welcome to InnoTester, blah blah",
-        reply_markup=CHOOSE_ASSIGNMENT_KB
-    )
-
-    data["last_message"] = last_message
-    await state.set_data(data)
+async def onCmdStart(message: Message, context: FSMWrapper):
+    await context.set_state(None) # to revert the ShareStates
+    await context.clean_last_message()
+    msg = await answers.answerWelcome(message)
+    await context.set("last_message", msg)
     logInfo(message, "Issued /start")
 
 
 @dp.message(Command("share"))
-async def onCmdShare(message: Message, state: FSMContext):
-    data = await state.get_data()
-
-    last_message: Message = data.get("last_message")
-    if last_message:
-        await last_message.delete()
-
-    assignment: Assignment = data.get("assignment")
-
+async def onCmdShare(message: Message, context: FSMWrapper):
+    await context.clean_last_message()
+    assignment: Assignment = await context.get("assignment")
     if assignment:
-        last_message = await message.answer(
-            text=(
-                "Wanna share?\n"
-                f"Chosen: {assignment}\n\n"
-                "What are you sharing, fellow coder?"
-            ),
-            reply_markup=SHARE_KB
-        )
+        msg = await answers.answerShare(message, assignment)
         logInfo(message, f"Issued /share ({assignment})")
     else:
-        last_message = await message.answer(
-            text=(
-                "Wanna share?\n"
-                "Choose the Assignment first"
-            ),
-            reply_markup=CHOOSE_ASSIGNMENT_SHARE_KB
-        )
+        msg = await answers.answerShareNoAssign(message)
         logInfo(message, "Issued /share (no assignment)")
-
-    data["last_message"] = last_message
-    await state.set_data(data)
+    await context.set("last_message", msg)
 
 
 @dp.callback_query(F.data == SHARE_TESTGEN_CB)
-async def onShareTestGenButton(query: CallbackQuery, state: FSMContext):
-    data = await state.get_data()
-    data["last_message"] = query.message
-
-    await state.set_state(ShareStates.SEND_TESTGEN)
-
-    await query.message.edit_text(
-        "Now please, send the send the TestGen code as a file",
-        reply_markup=SHARE_CANCEL_KB
-    )
+async def onShareTestGenButton(query: CallbackQuery, context: FSMWrapper):
+    await context.set("last_message", query.message)
+    await context.set_state(ShareStates.SEND_TESTGEN)
+    await answers.editSendTestGen(query.message)
     logInfo(query, "Clicked SHARE_TESTGEN")
 
 
 @dp.callback_query(F.data == SHARE_REFERENCE_CB)
-async def onShareReferenceButton(query: CallbackQuery, state: FSMContext):
-    data = await state.get_data()
-    data["last_message"] = query.message
-
-    await state.set_state(ShareStates.SEND_REFERENCE)
-
-    await query.message.edit_text(
-        "Now please, send the send the Reference code as a file",
-        reply_markup=SHARE_CANCEL_KB
-    )
+async def onShareReferenceButton(query: CallbackQuery, context: FSMWrapper):
+    await context.set("last_message", query.message)
+    await context.set_state(ShareStates.SEND_REFERENCE)
+    await answers.editSendReference(query.message)
     logInfo(query, "Clicked SHARE_REFERENCE")
 
 
 @dp.message(StateFilter(ShareStates.SEND_REFERENCE), F.document)
-async def onShareReferenceDocument(message: Message, state: FSMContext):
-    data = await state.get_data()
-
-    last_message: Message = data["last_message"]
-    if last_message:
-        await last_message.delete()
-
-    assignment: Assignment = data.get("assignment")
+async def onShareReferenceDocument(message: Message, context: FSMWrapper):
+    await context.clean_last_message()
+    assignment: Assignment = await context.get("assignment")
 
     if not assignment:
         logInfo(message, "Failed to send reference (no assignment)")
-        await onCmdShare(message, state)
+        await onCmdShare(message, context)
+        return
 
     if not message.from_user.username:
-        await message.answer(
-            "To use the bot you need to have a @username\n"
-            "Set one in the Telegram settings to proceed"
-        )
+        await answers.answerNeedUsername(message)
         logInfo(message, "Failed share reference (no username)")
         return
 
-    last_message = await message.answer(
-        "Thanks, hero!\n"
-        f"Reference sent for {assignment}\n\n"
-        "We'll review your code and send "
-        "you the acceptance verdict afterwards\n\n"
-        "Stay tuned :)"
-    )
-    data["last_message"] = last_message
-    await state.set_data(data)
-    await state.set_state(None)
-
+    msg = await answers.answerThanksForReference(message, assignment)
     logInfo(message, f"Succesfully sent reference ({assignment})")
 
-    moder_count = 0
-    for moder_id in await modersManager.get():    # TODO: make adding reference by buttons
-        await instance.send_document(             #       instead of manual
-            moder_id,
-            caption=(
-                "One hero want to share his Reference\!\n"
-                f"{assignment.to_list_with_id()}\n"
-                f"@{message.from_user.username}\n"
-            ),
-            document=message.document.file_id,
-            parse_mode="MarkdownV2"
-        )
-        moder_count += 1
+    await context.set("last_message", msg)
+    await context.set_state(None)
 
+    moder_count = 0
+    for moder_id in await modersManager.get(): # TODO: make adding reference by buttons
+        await answers.sendAdminReference(message, moder_id, assignment)
+        moder_count += 1
     logInfo(message, f"{moder_count} moders received sent reference")
 
 
 @dp.message(StateFilter(ShareStates.SEND_TESTGEN), F.document)
-async def onShareTestGenDocument(message: Message, state: FSMContext):
-    data = await state.get_data()
-
-    assignment : Assignment = data.get("assignment")
+async def onShareTestGenDocument(message: Message, context: FSMWrapper):
+    await context.clean_last_message()
+    assignment : Assignment = await context.get("assignment")
 
     if not assignment:
         logInfo(message, "Failed to send testgen (no assignment)")
-        await onCmdShare(message, state)
-
-    last_message: Message = data["last_message"]
-    if last_message:
-        await last_message.delete()
+        await onCmdShare(message, context)
+        return
 
     if not message.from_user.username:
-        await message.answer(
-            "To use the bot you need to have a @username\n"
-            "Set one in the Telegram settings to proceed"
-        )
+        await answers.answerNeedUsername(message)
         logInfo(message, "Failed share testgen (no username)")
         return
 
-    last_message = await message.answer(
-        "Thanks, hero!\n"
-        f"TestGen sent for {assignment}\n\n"
-        "We'll review your code and send "
-        "you the acceptance verdict afterwards\n\n"
-        "Stay tuned :)"
-    )
+    msg = await answers.answerThanksForTestGen(message, assignment)
     logInfo(message, f"Succesfully sent testgen ({assignment})")
 
-    data["last_message"] = last_message
-    await state.set_data(data)
-    await state.set_state(None)
+    await context.set("last_message", msg)
+    await context.set_state(None)
 
     moder_count = 0
     for moder_id in await modersManager.get(): # TODO: make adding testgen by buttons
-        await instance.send_document(          #       instead of manual
-            moder_id,
-            caption=(
-                "One hero want to share his TestGen\!\n"
-                f"{assignment.to_list_with_id()}\n"
-                f"@{message.from_user.username}\n"
-            ),
-            document=message.document.file_id,
-            parse_mode="MarkdownV2"
-        )
+        await answers.sendAdminTestGen(message, moder_id, assignment)
         moder_count += 1
-
     logInfo(message, f"{moder_count} moders received sent testgen")
 
 
 @dp.callback_query(F.data == SHARE_CANCEL_CB)
-async def onCancelShare(query: CallbackQuery, state: FSMContext):
-    data = await state.get_data()
-    data["last_message"] = query.message
-
-    await state.set_state(None)
-    assignment: Assignment = data.get("assignment")
-
+async def onCancelShare(query: CallbackQuery, context: FSMWrapper):
+    await context.set("last_message", query.message)
+    await context.set_state(None)
+    assignment: Assignment = await context.get("assignment")
     if assignment:
-        await query.message.edit_text(
-            text=(
-                "Wanna share?\n"
-                f"Chosen: {assignment}\n\n"
-                "What are you sharing, fellow coder?"
-            ),
-            reply_markup=SHARE_KB
-        )
+        await answers.editShare(query.message, assignment)
         logInfo(query, f"Canceled /share ({assignment})")
     else:
-        await query.message.edit_text(
-            text=(
-                "Wanna share?\n"
-                "Choose the Assignment first"
-            ),
-            reply_markup=CHOOSE_ASSIGNMENT_SHARE_KB
-        )
+        await answers.editShareNoAssignment(query.message)
         logInfo(query, "Canceled /share (assignment NOT chosen)")
 
 
 @dp.callback_query(F.data == CHOOSE_ASSIGNMENT_CB)
-async def onOpenAssignmentsList(query: CallbackQuery, state: FSMContext):
-    data = await state.get_data()
-    data["last_message"] = query.message
+async def onOpenAssignmentsList(query: CallbackQuery, context: FSMWrapper):
+    await context.set("last_message", query.message)
 
     assignments = assignmentsManager.cached
-    chosenAssignment = data.get("assignment")
 
-    data["assignment"] = None
-    await state.set_data(data)
+    chosen = await context.get("assignment")
+    await context.set("assignment", None)
 
-    await query.message.edit_text(
-        text="Here are all the assignments:",
-        reply_markup=assigListKeyboard(assignments, chosenAssignment)
-    )
+    await answers.editAssignmentsList(query.message, assignments, chosen)
     logInfo(query, "Opened users' assignments list")
 
 
 @dp.callback_query(F.data == CHOOSE_ASSIGNMENT_SHARE_CB)
-async def onOpenAssignmentsListForShare(query: CallbackQuery, state: FSMContext):
-    await state.set_state(ShareStates.CHOOSE_ASSIGNMENT)
-    await onOpenAssignmentsList(query, state)
+async def onOpenAssignmentsListForShare(query: CallbackQuery, context: FSMWrapper):
+    await context.set_state(ShareStates.CHOOSE_ASSIGNMENT)
+    await onOpenAssignmentsList(query, context)
 
 
 @dp.callback_query(
     StateFilter(ShareStates.CHOOSE_ASSIGNMENT),
     F.data.startswith(ASSIGNMENT_CB_PREFIX))
-async def onChooseAssignmentForShare(query: CallbackQuery, state: FSMContext):
-    data = await state.get_data()
-    data["last_message"] = query.message
+async def onChooseAssignmentForShare(query: CallbackQuery, context: FSMWrapper):
+    await context.set("last_message", query.message)
 
     id = query.data.split("_")[1]
     assignment = await assignmentsManager.getAssignment(id)
+    await context.set("assignment", assignment)
+    await context.set_state(None)
 
-    data["assignment"] = assignment
-    await state.set_data(data)
-
-    await query.message.edit_text(
-        text=(
-           f"Chosen: {assignment}\n\n"
-            "What are you sharing, fellow coder?"
-        ),
-        reply_markup=SHARE_KB
-    )
-    await state.set_state(None)
+    await answers.editShare(query.message, assignment)
     logInfo(query, f"Chosen assignment for /share ({assignment})")
 
 

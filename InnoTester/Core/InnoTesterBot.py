@@ -1,11 +1,12 @@
 from aiogram import Bot, Dispatcher
-import InnoTester.Utils.Config as Config
-from InnoTester.Utils.Logging import logging
 
 from InnoTester.Core.Logic import (
     AssignmentsManager, CodeManager,
     ModersManager
 )
+import InnoTester.Utils.Config as Config
+from InnoTester.Utils.Logging import logging
+from InnoTester.Utils.Middlewares import CustomMiddleware
 
 
 class InnoTesterBot(Bot):
@@ -15,6 +16,9 @@ class InnoTesterBot(Bot):
 
 instance = InnoTesterBot()
 dp = Dispatcher()
+
+dp.message.middleware(CustomMiddleware())
+dp.callback_query.middleware(CustomMiddleware())
 
 assignmentsManager = AssignmentsManager()
 codeManager = CodeManager()
