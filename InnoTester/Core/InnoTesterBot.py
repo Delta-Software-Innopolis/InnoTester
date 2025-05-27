@@ -1,12 +1,12 @@
 from aiogram import Bot, Dispatcher
 
+from InnoTester.Utils import Config 
+from InnoTester.Utils.Logging import logging
+from InnoTester.Utils.Middlewares import CustomMiddleware
 from InnoTester.Core.Logic import (
     AssignmentsManager, CodeManager,
     ModersManager
 )
-import InnoTester.Utils.Config as Config
-from InnoTester.Utils.Logging import logging
-from InnoTester.Utils.Middlewares import CustomMiddleware
 
 
 class InnoTesterBot(Bot):
@@ -23,5 +23,3 @@ dp.callback_query.middleware(CustomMiddleware())
 assignmentsManager = AssignmentsManager()
 codeManager = CodeManager()
 modersManager = ModersManager()
-
-logging.getLogger().debug("Configuration issued")

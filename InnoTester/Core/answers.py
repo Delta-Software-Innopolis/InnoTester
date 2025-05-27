@@ -1,19 +1,18 @@
 from aiogram import F
 from aiogram.types import (
-    Message, CallbackQuery, Document
+    Message, CallbackQuery, User
 )
 
-from InnoTester.Utils.Keyboards import (
-    CHOOSE_ASSIGNMENT_KB, CHOOSE_ASSIGNMENT_CB,
-    CHANGE_ASSIGNMENT_KB,
-    SHARE_KB, SHARE_CANCEL_KB, SHARE_CANCEL_CB,
-    CHOOSE_ASSIGNMENT_SHARE_KB, CHOOSE_ASSIGNMENT_SHARE_CB,
-    SHARE_REFERENCE_CB, SHARE_TESTGEN_CB,
-    ASSIGNMENT_CB_PREFIX, STOP_CB_PREFIX,
-    stopTestKeyboard, assigListKeyboard,
-)
+from InnoTester.Utils import Config
 from InnoTester.Core.InnoTesterBot import instance
 from InnoTester.Core.Logic.Models import Assignment
+from InnoTester.Utils.Keyboards import (
+    CHOOSE_ASSIGNMENT_KB,
+    CHANGE_ASSIGNMENT_KB,
+    SHARE_KB, SHARE_CANCEL_KB,
+    CHOOSE_ASSIGNMENT_SHARE_KB,
+    stopTestKeyboard, assigListKeyboard,
+)
 
 
 async def answerWelcome(message: Message) -> Message:
@@ -148,4 +147,132 @@ async def editAssignmentsList(
     return await message.edit_text(
         text="Here are all the assignments:",
         reply_markup=assigListKeyboard(assignments, chosen)
+    )
+
+
+async def queryAnswerAssignmentNotConfigured(
+        query: CallbackQuery, assignment: Assignment
+    ):
+    reference_emoji = '✅' if assignment.has_reference else '❌'
+    testgen_emoji = '✅' if assignment.has_testgen else '❌'
+    return await query.answer(
+        "This assignment is not yet configured 🥺\n\n"
+        "Current status:\n"
+        f" {reference_emoji} Reference Solution\n"
+        f" {testgen_emoji} Test Generator\n\n"
+        "If YOU want to share your solution or "
+        "test generator - type /share, be a hero 😎",
+        show_alert=True
+    )
+
+
+async def editAssignmentChosen(message: Message, assign: Assignment) -> Message:
+    return await message.edit_text(
+        text=(
+            "Chosen Assignment:\n"
+            f"{str(assign)}\n"
+            "Now you can send your code"
+        ),
+        reply_markup=CHANGE_ASSIGNMENT_KB
+    )
+
+
+async def editTestingStarted(
+        message: Message,
+        assignment: Assignment,
+        user: User
+    ) -> Message:
+    return await message.edit_text(
+        text=(
+            "Testing started\n"
+            f"Assignment: {assignment}\n"
+            "⚠️ Please, wait until the previous code finishes testing process"
+        ),
+        reply_markup=stopTestKeyboard(user.username)
+    )
+
+
+async def answerChooseAssignmentFirst(message: Message) -> Message:
+    return await message.answer(
+        text="You need first to choose the assignment",
+        reply_markup=CHOOSE_ASSIGNMENT_KB
+    )
+
+
+async def editChooseAssignmentFirst(message: Message):
+    return await message.edit_text(
+        text="You need first to choose the assignment",
+        reply_markup=CHOOSE_ASSIGNMENT_KB
+    )
+
+
+async def answerSupportedExtensions(
+        message: Message, extensions: str
+    ) -> Message:
+    return await message.answer(f"Only {extensions} files are accepted")
+
+
+async def answerTestingStarted(
+        message: Message, assign: Assignment
+    ) -> Message:
+    return await message.answer(
+        text=(
+            "Testing started\n"
+            f"Assignment: {assign}"
+        ),
+        reply_markup=stopTestKeyboard(message.from_user.username)
+    )
+
+
+async def editTestingTerminated(message: Message) -> Message:
+    return await message.edit_text(
+        text=(
+            "Testing process terminated"
+        ),
+        reply_markup=CHANGE_ASSIGNMENT_KB
+    )
+
+
+async def editTestingError(message: Message, containerLog: list) -> Message:
+    return await message.edit_text(
+        text=(
+            "Error occurred while testing your solution:\n"
+            f"{"".join(containerLog)}\n"
+        ),
+        reply_markup=CHANGE_ASSIGNMENT_KB
+    )
+
+
+async def editContainerError(message: Message, e: Exception) -> Message:
+    return await message.edit_text(
+        text=(
+            "Error occurred when running container:\n"
+            f"{e}\n"
+        ),
+        reply_markup=CHANGE_ASSIGNMENT_KB
+    )
+
+
+async def editNothingToStop(message: Message):
+    return await message.edit_text(
+        text="Testing process was not ran. Nothing to stop.",
+        reply_markup=CHANGE_ASSIGNMENT_KB
+    )
+
+
+async def editTestingStopped(message: Message, assign: Assignment):
+    return await message.edit_text(
+        text=(
+            "Testing stopped\n"
+            f"Assignment: {assign}\n"
+            "Now you can send your code"
+        ),
+        reply_markup=CHANGE_ASSIGNMENT_KB
+    )
+
+
+async def editErrorHandler(message: Message, ans: list[str], testCount: int):
+    return await message.edit_text(
+        **Config.errorHandler(ans, testCount).as_kwargs(),
+        reply_markup=CHANGE_ASSIGNMENT_KB
     )

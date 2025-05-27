@@ -7,7 +7,6 @@ from aiogram.fsm.state import State
 class FSMWrapper():
     def __init__(self, state: FSMContext):
         self.state = state
-        self._data = None
 
     async def set_state(self, state: State):
         await self.state.set_state(state)
@@ -16,16 +15,21 @@ class FSMWrapper():
         return await self.state.get_state()
 
     async def set(self, key: str, data: Any):
-        if not self._data:
-            self._data = await self.state.get_data()
-        self._data[key] = data
-        await self.state.set_data(self._data)
-
+        _data = await self.state.get_data()
+        _data[key] = data
+        await self.state.set_data(_data)
 
     async def get(self, key: str, default: Any = None) -> Any | None:
-        if not self._data:
-            self._data = await self.state.get_data()
-        return self._data.get(key)
+        _data = await self.state.get_data()
+        return _data.get(key)
+
+    async def has_key(self, key: str) -> bool:
+        return key in await self.state.get_data()
+
+    async def del_key(self, key: str):
+        _data = await self.state.get_data()
+        del _data[key]
+        await self.state.set_data(_data)
 
 
     async def clean_last_message(self):

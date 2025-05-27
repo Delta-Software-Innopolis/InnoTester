@@ -1,11 +1,9 @@
 import os
 import shutil
 import aiofiles
-from typing import Any, Literal, overload
 from aiogram import F
 from aiogram.filters import Command, CommandStart, StateFilter
 from aiogram.types import Message, CallbackQuery
-from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import StatesGroup, State
 from aiogram.exceptions import TelegramBadRequest
 from aiogram.types import FSInputFile
@@ -19,13 +17,11 @@ from InnoTester.Core.InnoTesterBot import (
     modersManager, assignmentsManager
 )
 from InnoTester.Utils.Keyboards import (
-    CHOOSE_ASSIGNMENT_KB, CHOOSE_ASSIGNMENT_CB,
-    CHANGE_ASSIGNMENT_KB,
-    SHARE_KB, SHARE_CANCEL_KB, SHARE_CANCEL_CB,
-    CHOOSE_ASSIGNMENT_SHARE_KB, CHOOSE_ASSIGNMENT_SHARE_CB,
+    CHOOSE_ASSIGNMENT_CB,
+    SHARE_CANCEL_CB,
+    CHOOSE_ASSIGNMENT_SHARE_CB,
     SHARE_REFERENCE_CB, SHARE_TESTGEN_CB,
     ASSIGNMENT_CB_PREFIX, STOP_CB_PREFIX,
-    stopTestKeyboard, assigListKeyboard,
 )
 from InnoTester.Utils.FSMWrapper import FSMWrapper
 from InnoTester.Utils.Logging import logInfo, logError
@@ -181,83 +177,47 @@ async def onChooseAssignmentForShare(query: CallbackQuery, context: FSMWrapper):
 
 
 @dp.callback_query(F.data.startswith(ASSIGNMENT_CB_PREFIX))
-async def onChooseAssignment(query: CallbackQuery, state: FSMContext):
-    data = await state.get_data()
-    data["last_message"] = query.message
+async def onChooseAssignment(query: CallbackQuery, context: FSMWrapper):
+    await context.set("last_message", query.message)
 
     id = query.data.split("_")[1]
     assignment = await assignmentsManager.getAssignment(id)
 
     if not assignment.is_configured():
-        reference_emoji = '✅' if assignment.has_reference else '❌'
-        testgen_emoji = '✅' if assignment.has_testgen else '❌'
-        await query.answer(
-            "This assignment is not yet configured 🥺\n\n"
-            "Current status:\n"
-            f" {reference_emoji} Reference Solution\n"
-            f" {testgen_emoji} Test Generator\n\n"
-            "If YOU want to share your solution or "
-            "test generator - type /share, be a hero 😎",
-            show_alert=True
-        )
         logInfo(query, f"Tried to choose NOTCONFIGURED assignment ({assignment})")
+        await answers.queryAnswerAssignmentNotConfigured(query, assignment)
         return
 
-    data["assignment"] = assignment
-    await state.set_data(data)
+    await context.set("assignment", assignment)
+    await answers.editAssignmentChosen(query.message, assignment)
 
-    await query.message.edit_text(
-        text=(
-            "Chosen Assignment:\n"
-            f"{str(assignment)}\n"
-            "Now you can send your code"
-        ),
-        reply_markup=CHANGE_ASSIGNMENT_KB
-    )
     logInfo(query, f"Chosen assignment ({assignment})")
 
 
 @dp.message(F.document)
-async def onDocument(message: Message, state: FSMContext): # TODO: please, handle should not be
-    dockerClient = aiodocker.Docker()                      #               93 lines of code XD
-    data = await state.get_data()
+async def onDocument(message: Message, context: FSMWrapper):
+    dockerClient = aiodocker.Docker()
 
-    assignment = data.get("assignment")
-    last_message: Message = data.get("last_message")
+    assignment: Assignment = await context.get("assignment")
+    last_message: Message = await context.get("last_message")
 
     if not message.from_user.username:
-        await message.answer(
-            "To use the bot you need to have a @username\n"
-            "Set one in the Telegram settings to proceed"
-        )
+        await answers.answerNeedUsername(message)
         await dockerClient.close()
         logInfo(message, "Failed to start testing (no username)")
         return
 
     if os.path.exists("data/probes/" + message.from_user.username):
-        await last_message.edit_text(
-            text=(
-                "Testing started\n"
-                f"Assignment: {assignment}\n"
-                "⚠️ Please, wait until the previous code finishes testing process"
-            ),
-            reply_markup=stopTestKeyboard(message.from_user.username)
-        )
+        await answers.editTestingStarted(last_message, assignment, message.from_user)
         await dockerClient.close()
         logInfo(message, "Failed to start testing (already testing)")
         return
 
-    if last_message: # That's important, to delete the message before document sent
-        await last_message.delete()    
-
+    await context.clean_last_message()
 
     if not assignment:
-        last_message = await message.answer(
-            text="You need first to choose the assignment",
-            reply_markup=CHOOSE_ASSIGNMENT_KB
-        )
-        data["last_message"] = last_message
-        await state.set_data(data)
+        last_message = await answers.answerChooseAssignmentFirst(message)
+        await context.set("last_message", last_message)
         await dockerClient.close()
         logInfo(message, "Failed to start testing (no assignment)")
         return
@@ -274,7 +234,7 @@ async def onDocument(message: Message, state: FSMContext): # TODO: please, handl
             else:
                 supportedExtensions += f".{ext}, "
 
-        await message.answer(f"Only {supportedExtensions} files are accepted")
+        await answers.answerSupportedExtensions(message, supportedExtensions)
         await dockerClient.close()
         logInfo(message, "Failed to start testing (inacceptable ext)")
         return
@@ -300,21 +260,13 @@ async def onDocument(message: Message, state: FSMContext): # TODO: please, handl
     async with aiofiles.open(f"data/probes/{message.from_user.username}/comparison_page.html", "w") as proto:
         await proto.write("")
 
-    last_message = await message.answer(
-        text=(
-            "Testing started\n"
-            f"Assignment: {assignment}"
-        ),
-        reply_markup=stopTestKeyboard(message.from_user.username)
-    )
+    last_message = await answers.answerTestingStarted(message, assignment)
+    await context.set("last_message", last_message)
     logInfo(message, f"Started testing ({assignment}) ({probeExtension})")
 
-    data["last_message"] = last_message
-    await state.set_data(data)
-
     pwd = os.getcwd()
-    referenceExtension = Config.getLanguage(data['assignment'].reference_id, f"{pwd}/data/references")
-    testgenExtension = Config.getLanguage(data['assignment'].testgen_id, f"{pwd}/data/testgens")
+    referenceExtension = Config.getLanguage(assignment.reference_id, f"{pwd}/data/references")
+    testgenExtension = Config.getLanguage(assignment.testgen_id, f"{pwd}/data/testgens")
     username = message.from_user.username
 
     containerConfig = {
@@ -325,8 +277,8 @@ async def onDocument(message: Message, state: FSMContext): # TODO: please, handl
             "Binds": [
                 f"{pwd}/resources/compile.yaml:/testEnv/compile.yaml",
                 f"{pwd}/data/probes/{username}/probe.{probeExtension}:/testEnv/probe.{probeExtension}",
-                f"{pwd}/data/references/{data['assignment'].reference_id}.{referenceExtension}:/testEnv/reference.{referenceExtension}",
-                f"{pwd}/data/testgens/{data['assignment'].testgen_id}.{testgenExtension}:/testEnv/testgen.{testgenExtension}",
+                f"{pwd}/data/references/{assignment.reference_id}.{referenceExtension}:/testEnv/reference.{referenceExtension}",
+                f"{pwd}/data/testgens/{assignment.testgen_id}.{testgenExtension}:/testEnv/testgen.{testgenExtension}",
                 f"{pwd}/data/probes/{username}/protocol.txt:/testEnv/protocol.txt",
                 f"{pwd}/data/probes/{username}/comparison_page.html:/testEnv/comparison_page.html",
                 f"{pwd}/data/probes/{username}/iterations.txt:/testEnv/iterations.txt",
@@ -337,46 +289,30 @@ async def onDocument(message: Message, state: FSMContext): # TODO: please, handl
 
     try:
         container = await dockerClient.containers.run(config=containerConfig)
-
-
-        data['container'] = container
-        await state.set_data(data)
+        await context.set("container", container)
 
         containerLog = []
         async for log in container.log(stderr=True, follow=True):
             containerLog.append(log)
 
         result = await container.wait()
-        data = await state.get_data()
 
-        if "testing_killed" in data:
-            await last_message.edit_text(
-                text=(
-                    "Testing process terminated"
-                ),
-                reply_markup=CHANGE_ASSIGNMENT_KB
-            )
+        if await context.has_key("testing_killed"):
+            print('killed')
+            await answers.editTestingTerminated(last_message)
             shutil.rmtree(f"data/probes/{message.from_user.username}", ignore_errors=True)
-            del data["testing_killed"]
-
-            await state.set_data(data)
+            await context.del_key("testing_killed")
             await dockerClient.close()
             return
 
         if result['StatusCode'] != 0:
-            await last_message.edit_text(
-                text=(
-                    "Error occurred while testing your solution:\n"
-                    f"{"".join(containerLog)}\n"
-                ),
-                reply_markup=CHANGE_ASSIGNMENT_KB
-            )
+            await answers.editTestingError(last_message, containerLog)
             logInfo(message, f"Error while testing: {''.join(containerLog)}")
         else:
             async with aiofiles.open(f"data/probes/{message.from_user.username}/protocol.txt") as proto:
                 ans = await proto.readlines()
                 try:
-                    await last_message.edit_text(**Config.errorHandler(ans, testCount).as_kwargs(), reply_markup=CHANGE_ASSIGNMENT_KB)
+                    await answers.editErrorHandler(last_message, ans, testCount)
                 except TelegramBadRequest:
                     protocol = FSInputFile(f"data/probes/{message.from_user.username}/protocol.txt")
                     await message.answer_document(protocol)
@@ -389,24 +325,11 @@ async def onDocument(message: Message, state: FSMContext): # TODO: please, handl
                     compPage = FSInputFile(f"data/probes/{message.from_user.username}/comparison_page.html")
                     await message.answer_document(compPage)
 
-
     except aiodocker.exceptions.DockerContainerError as e:
-        await last_message.edit_text(
-            text=(
-                "Error occurred when running container:\n"
-                f"{e}\n"
-            ),
-            reply_markup=CHANGE_ASSIGNMENT_KB
-        )
+        await answers.editContainerError(last_message, e)
         logError(message, f"Error running container: {e}")
     except aiodocker.exceptions.DockerError as e:
-        await last_message.edit_text(
-            text=(
-                "Error occurred when running container:\n"
-                f"{e}\n"
-            ),
-            reply_markup=CHANGE_ASSIGNMENT_KB
-        )
+        await answers.editContainerError(last_message, e)
         logError(message, f"Error running container: {e}")
 
     shutil.rmtree(f"data/probes/{message.from_user.username}", ignore_errors=True)
@@ -414,41 +337,25 @@ async def onDocument(message: Message, state: FSMContext): # TODO: please, handl
 
 
 @dp.callback_query(F.data.startswith(STOP_CB_PREFIX))
-async def onStopTesting(query: CallbackQuery, state: FSMContext):
-    data = await state.get_data()
-
-    assignment = data.get("assignment")
+async def onStopTesting(query: CallbackQuery, context: FSMWrapper):
+    assignment: Assignment = await context.get("assignment")
 
     if not assignment:
-        await query.message.edit_text(
-            text="You need first to choose the assignment",
-            reply_markup=CHOOSE_ASSIGNMENT_KB
-        )
+        await answers.editChooseAssignmentFirst(query.message)
         logInfo(query, "Failed to stop testing (no assignment)")
         return
 
-    if "container" not in data.keys():
-        await query.message.edit_text(
-            text="Testing process was not ran. Nothing to stop.",
-            reply_markup=CHANGE_ASSIGNMENT_KB
-        )
+    if not await context.has_key("container"):
+        await answers.editNothingToStop(query.message)
         logInfo(query, "Failed to stop testing (nothing to stop)")
         return
 
-    cont = data["container"]
+    cont = await context.get("container")
 
-    del data["container"]
-    data["testing_killed"] = True
-    await state.set_data(data)
+    await context.del_key("container")
+    await context.set("testing_killed", True)
 
     await cont.kill()
 
-    await query.message.edit_text(
-        text=(
-            "Testing stopped\n"
-            f"Assignment: {assignment}\n"
-            "Now you can send your code"
-        ),
-        reply_markup=CHANGE_ASSIGNMENT_KB
-    )
+    await answers.editTestingStopped(query.message, assignment)
     logInfo(query, "Stopped testing forcefully")
