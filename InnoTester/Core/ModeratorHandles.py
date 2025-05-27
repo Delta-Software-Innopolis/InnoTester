@@ -21,18 +21,6 @@ from InnoTester.Utils.Logging import (
 from InnoTester.Core import ModeratorAnswers as answers
 
 
-# utils
-
-def build_assignments_list(assignments: list) -> str:
-    return "\n".join(
-        a.to_list_with_id()
-        for a in assignments
-    )
-
-
-# handlers
-
-
 @dp.message(Command("removereference", "removeref"))
 async def cmdClearReference(message: types.Message):
     if not await modersManager.hasModerWithId(message.from_user.id):
@@ -344,8 +332,8 @@ async def listAssignments(message: types.Message):
         logNotPermitted(message, "assignments")
         return
 
-    assignments_list = build_assignments_list(assignmentsManager.cached)
-    await answers.answerAssignmentsList(message, assignments_list)
+    await answers.answerAssignmentsList(message, assignmentsManager.cached)
+    logInfo(message, "Showed assignments list (moder)")
     
 
 @dp.message(Command("addassignment", "adda"))

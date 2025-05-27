@@ -198,8 +198,9 @@ async def answerProbeList(message: Message, probeList: list[str]) -> Message:
 
 async def answerAssignmentsList(
         message: Message,
-        assignments_list: str 
+        assignments: list[Assignment] 
     ) -> Message:
+    assignments_list = build_assignments_list(assignments)
 
     return await message.answer(
         "Here are all the assignments:\n"
