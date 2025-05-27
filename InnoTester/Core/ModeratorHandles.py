@@ -4,7 +4,6 @@ from io import BytesIO
 from aiogram import types
 from aiogram.exceptions import TelegramBadRequest
 from aiogram.filters.command import Command
-from aiogram.utils.formatting import Code
 
 from InnoTester.Core.InnoTesterBot import (
     dp, instance, assignmentsManager, codeManager, modersManager

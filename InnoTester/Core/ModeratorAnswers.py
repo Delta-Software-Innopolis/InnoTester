@@ -1,4 +1,4 @@
-from aiogram.types import Message, CallbackQuery, User
+from aiogram.types import Message, User
 from aiogram.utils.formatting import Code
 
 from InnoTester.Core.Logic.Models import Assignment
