@@ -26,7 +26,7 @@ from InnoTester.Utils.Keyboards import (
 from InnoTester.Utils.FSMWrapper import FSMWrapper
 from InnoTester.Utils.Logging import logInfo, logError
 
-from InnoTester.Core import answers
+from InnoTester.Core import UserAnswers as answers
 
 
 class ShareStates(StatesGroup):
